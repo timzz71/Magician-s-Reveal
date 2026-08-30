@@ -1,10 +1,4 @@
-# MeowScanner.ps1 – Minecraft SS Forensic Scanner (detect.ac‑parity edition)
-# Version: 1.0.0
-# Author: System Forensics
-# Description: One‑shot, consented, investigator‑run scan for Minecraft cheat artifacts.
-# Flags: Info (21) | Warning (63) | Detection (48) – 132 total.
-# Usage: .\MeowScanner.ps1 [-OutputDir <path>] [-MinecraftDir <path>]
-# ------------------------------------------------------------
+
 
 param(
     [string]$OutputDir = $PWD.Path,
