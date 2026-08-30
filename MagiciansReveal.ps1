@@ -24,7 +24,6 @@ if (-not $isAdmin) {
 # Initialize findings
 $script:Findings = @()
 
-# Helper: Add finding
 function Add-Finding {
     param(
         [string]$Id,
@@ -47,24 +46,22 @@ function Add-Finding {
     Write-Host "[$Tier] $Title" -ForegroundColor $(if ($Tier -eq "Detection") { "Red" } elseif ($Tier -eq "Warning") { "Yellow" } else { "White" })
 }
 
-# ---- Simplified suspicious patterns (remove problematic characters) ----
+# ============ SUSPICIOUS PATTERNS (CLEAN VERSION) ============
 $suspiciousPatterns = @(
-    "AimAssist", "AnchorTweaks", "AutoAnchor", "AutoCrystal", "AutoDoubleHand", "JDWP.VirtualMachine.AllModules",
+    "AimAssist", "AnchorTweaks", "AutoAnchor", "AutoCrystal", "AutoDoubleHand",
     "AutoHitCrystal", "AutoPot", "AutoTotem", "AutoArmor", "InventoryTotem",
-    "LegitTotem", "PingSpoof", "SelfDestruct",
-    "ShieldBreaker", "TriggerBot", "AxeSpam", "WebMacro",
-    "FastPlace", "WalskyOptimizer", "WalksyOptimizer", "walsky.optimizer",
-    "WalksyCrystalOptimizerMod", "Donut", "Replace Mod",
-    "ShieldDisabler", "SilentAim", "Totem Hit", "Wtap", "FakeLag", "dev.virel", "orchard",
-    "BlockESP", "dev.krypton", "dev/krypton", "skid.krypton", "skid/krypton", "AntiMissClick",
-    "LagReach", "PopSwitch", "SprintReset", "ChestSteal", "AntiBot",
-    "ElytraSwap", "FastXP", "FastExp", "Refill", "AirAnchor",
-    "jnativehook", "FakeInv", "HoverTotem", "AutoClicker", "AutoFirework",
-    "PackSpoof", "Antiknockback", "catlean",
-    "AuthBypass", "Asteria", "Prestige", "AutoEat", "AutoMine",
-    "MaceSwap", "Macro198", "StunSlam", "SafeAnchor", "DoubleAnchor", "AutoTPA", "BaseFinder", "Xenon", "gypsy",
-    "AutoPotRefill", "WalksyOptimizer", "KeyPearl", "AimAssist", "AutoNethPot", "AutoDtap",
-    "TriggerBot", "AutoWeb", "AnchorAction",
+    "LegitTotem", "PingSpoof", "SelfDestruct", "ShieldBreaker", "TriggerBot",
+    "AxeSpam", "WebMacro", "FastPlace", "WalksyOptimizer", "WalskyOptimizer",
+    "WalksyCrystalOptimizerMod", "Donut", "Replace Mod", "ShieldDisabler",
+    "SilentAim", "Totem Hit", "Wtap", "FakeLag", "dev.virel", "orchard",
+    "BlockESP", "dev.krypton", "skid.krypton", "AntiMissClick", "LagReach",
+    "PopSwitch", "SprintReset", "ChestSteal", "AntiBot", "ElytraSwap",
+    "FastXP", "FastExp", "Refill", "AirAnchor", "jnativehook", "FakeInv",
+    "HoverTotem", "AutoClicker", "AutoFirework", "PackSpoof", "Antiknockback",
+    "catlean", "AuthBypass", "Asteria", "Prestige", "AutoEat", "AutoMine",
+    "MaceSwap", "Macro198", "StunSlam", "SafeAnchor", "DoubleAnchor",
+    "AutoTPA", "BaseFinder", "Xenon", "gypsy", "AutoPotRefill", "KeyPearl",
+    "AutoNethPot", "AutoDtap", "AutoWeb", "AnchorAction",
     "org.chainlibs.module.impl.modules.Crystal.Y",
     "org.chainlibs.module.impl.modules.Crystal.bF",
     "org.chainlibs.module.impl.modules.Crystal.bM",
@@ -77,245 +74,95 @@ $suspiciousPatterns = @(
     "org.chainlibs.module.impl.modules.Blatant.bx",
     "org.chainlibs.module.impl.modules.Blatant.cj",
     "org.chainlibs.module.impl.modules.Blatant.dk",
-    "imgui.gl3", "imgui.glfw",
-    "BowAim", "Criticals", "Fakenick", "FakeItem",
-    "invsee", "ItemExploit", "Hellion", "hellion",
-    "LicenseCheckMixin", "ClientPlayerInteractionManagerAccessor",
-    "ClientPlayerEntityMixim", "dev.gambleclient", "obfuscatedAuth",
-    "phantom-refmap.json", "xyz.greaj",
-    "N-tsu.class", "N-u.class", "N-chi.class", "N-e.class", "N-ta.class",
-    "N-ru.class", "N-so.class", "N-na.class", "N-de.class", "N-ge.class",
-    "N-zu.class", "N-ki.class", "N-tsu2.class", "N-ka.class", "N-se.class",
-    "N-to.class", "N-mi.class", "N-bi.class", "N-su.class", "N-no.class"
+    "imgui.gl3", "imgui.glfw", "BowAim", "Criticals", "Fakenick",
+    "FakeItem", "invsee", "ItemExploit", "Hellion", "LicenseCheckMixin",
+    "ClientPlayerInteractionManagerAccessor", "ClientPlayerEntityMixim",
+    "dev.gambleclient", "obfuscatedAuth", "phantom-refmap.json", "xyz.greaj"
 )
 
 $cheatStrings = @(
-    "AutoCrystal", "autocrystal", "auto crystal", "cw crystal", "JDWP.VirtualMachine.AllModules",
-    "dontPlaceCrystal", "dontBreakCrystal", "dev.virel", "orchard",
-    "AutoHitCrystal", "autohitcrystal", "canPlaceCrystalServer", "healPotSlot",
+    "AutoCrystal", "autocrystal", "auto crystal", "cw crystal",
+    "dontPlaceCrystal", "dontBreakCrystal", "AutoHitCrystal",
     "AutoAnchor", "autoanchor", "auto anchor", "DoubleAnchor",
-    "HasAnchor", "anchortweaks", "anchor macro", "safe anchor", "safeanchor",
-    "SafeAnchor", "AirAnchor",
-    "AutoTotem", "autototem", "auto totem", "InventoryTotem",
-    "inventorytotem", "HoverTotem", "hover totem", "legittotem",
-    "AutoPot", "autopot", "auto pot", "speedPotSlot", "strengthPotSlot",
-    "AutoArmor", "autoarmor", "auto armor",
-    "AutoPotRefill",
-    "preventSwordBlockBreaking", "preventSwordBlockAttack",
-    "ShieldDisabler", "ShieldBreaker",
-    "Breaking shield with axe...",
-    "AutoDoubleHand", "autodoublehand", "auto double hand",
-    "AutoClicker",
-    "Failed to switch to mace after axe!",
-    "AutoMace", "MaceSwap", "SpearSwap",
-    "StunSlam",
-    "Donut", "JumpReset", "axespam", "axe spam",
-    "findKnockbackSword", "attackRegisteredThisClick",
-    "AimAssist", "aimassist", "aim assist",
-    "triggerbot", "trigger bot",
-    "Silent Rotations", "SilentRotations",
-    "FakeInv", "swapBackToOriginalSlot",
-    "FakeLag", "pingspoof", "ping spoof",
-    "fakePunch", "Fake Punch",
-    "mace_swap", "quick_strike", "macro_198", "stun_slam",
-    "safe_anchor", "double_anchor", "auto_pot_refill",
-    "walksy_optimizer", "key_pearl", "aim_assist",
-    "auto_neth_pot", "auto_dtap", "trigger_bot", "auto_web",
-    "DOUBLE_ESCAPE", "DOUBLE_RIGHTCLICK_FIRST", "DOUBLE_RIGHTCLICK_SECOND",
-    "POST_CYCLE_DELAY", "PLACE_OBI", "WAIT_OBI", "PLACE_CRYSTAL", "BREAK_CRYSTAL",
-    "ROTATING_DOWN", "ROTATING_BACK", "REFILLING", "PLANTING", "BONEMEALING",
-    "AnchorAction", "Places two anchors for massive damage",
-    "REOFFHAND_TOTEM",
-    "webmacro", "web macro",
-    "AntiWeb", "AutoWeb",
-    "lvstrng", "dqrkis", "selfdestruct", "self destruct",
-    "WalksyCrystalOptimizerMod", "WalksyOptimizer", "WalskyOptimizer",
-    "autoCrystalPlaceClock",
-    "AutoFirework", "ElytraSwap", "FastXP", "FastExp", "NoJumpDelay",
-    "PackSpoof", "Antiknockback", "catlean",
-    "AuthBypass", "obfuscatedAuth", "LicenseCheckMixin",
-    "BaseFinder", "invsee", "ItemExploit",
-    "FreezePlayer",
-    "LWFH Crystal", "JDWP.VirtualMachine.AllModules",
-    "KeyPearl", "LootYeeter",
-    "FastPlace",
-    "AutoBreach",
-    "setBlockBreakingCooldown", "getBlockBreakingCooldown", "blockBreakingCooldown",
-    "onBlockBreaking", "setItemUseCooldown",
-    "invokeDoAttack", "invokeDoItemUse", "invokeOnMouseButton",
-    "onPushOutOfBlocks", "onIsGlowing",
-    "Automatically switches to sword when hitting with totem",
-    "arrayOfString", "POT_CHEATS",
-    "Dqrkis Client", "Entity.isGlowing",
-    "Activate Key",
-    "Click Simulation",
-    "On RMB",
-    "No Count Glitch",
-    "No Bounce", "NoBounce",
-    "Removes the crystal bounce animation",
-    "Place Delay",
-    "Break Delay",
-    "Fast Mode",
-    "Place Chance",
-    "Break Chance",
-    "Stop On Kill",
-    "Damage Tick", "damagetick",
-    "Anti Weakness",
-    "Particle Chance",
-    "Trigger Key",
-    "Switch Delay",
-    "Totem Slot",
-    "Silent Rotations",
-    "Smooth Rotations",
-    "Rotation Speed",
-    "Use Easing",
-    "Easing Strength",
-    "While Use",
-    "Stop on Kill",
-    "Click Simulation",
-    "Glowstone Delay",
-    "Glowstone Chance",
-    "Explode Delay",
-    "Explode Chance",
-    "Explode Slot",
-    "Only Charge",
-    "Anchor Macro",
-    "Reach Distance",
-    "Min Height",
-    "Min Fall Speed",
-    "Attack Delay",
-    "Breach Delay",
-    "Require Elytra",
-    "Auto Switch Back",
-    "Check Line of Sight",
-    "Only When Falling",
-    "Require Crit",
-    "Show Status Display",
-    "Stop On Crystal",
-    "Check Shield",
-    "On Pop",
-    "Predict Damage",
-    "On Ground",
-    "Check Players",
-    "Predict Crystals",
-    "Check Aim",
-    "Check Items",
-    "Activates Above",
-    "Blatant",
-    "Force Totem",
-    "Stay Open For",
-    "Auto Inventory Totem",
-    "Only On Pop",
-    "Vertical Speed",
-    "Hover Totem",
-    "Swap Speed",
-    "Strict One-Tick",
-    "Mace Priority",
-    "Min Totems",
-    "Min Pearls",
-    "Totem First",
-    "Drop Interval",
-    "Random Pattern",
-    "Loot Yeeter",
-    "Horizontal Aim Speed",
-    "Vertical Aim Speed",
-    "Include Head",
-    "Web Delay",
-    "Holding Web",
-    "Not When Affects Player",
-    "Hit Delay",
-    "Switch Back",
-    "Require Hold Axe",
-    "Fake Punch",
-    "placeInterval", "breakInterval", "stopOnKill",
-    "activateOnRightClick", "holdCrystal",
-    "PlaceInterval", "BreakInterval",
-    "StopOnKill", "activateOnRightClick",
-    "damagetick", "holdCrystal",
-    "fakePunch",
-    "Refills your hotbar with potions",
-    "Keeps you sprinting at all times",
-    "Places anchor, charges it, protects you, and explodes",
-    "Auto swap to spear on attack",
-    "Macro Key", "Auto Pot", "Macro Key",
-    "KillAura", "ClickAura", "MultiAura", "ForceField", "LegitAura",
-    "AimBot", "AutoAim", "SilentAim", "AimLock", "HeadSnap",
-    "CrystalAura",
-    "AnchorAura", "AnchorFill", "AnchorPlace",
-    "BedAura", "AutoBed", "BedBomb", "BedPlace",
-    "BowAimbot", "BowSpam", "AutoBow",
-    "AutoCrit", "CritBypass", "AlwaysCrit", "CriticalHit",
-    "ReachHack", "ExtendReach", "LongReach", "HitboxExpand",
-    "AntiKB", "NoKnockback", "GrimVelocity", "GrimDisabler", "VelocitySpoof", "KBReduce",
-    "OffhandTotem", "TotemSwitch",
-    "AutoWeapon", "AutoSword", "AutoCity", "Burrow", "SelfTrap",
-    "HoleFiller", "AntiSurround", "AntiBurrow",
-    "WTap", "TargetStrafe", "AutoGap", "AutoPearl",
+    "HasAnchor", "anchortweaks", "anchor macro", "safe anchor",
+    "SafeAnchor", "AirAnchor", "AutoTotem", "autototem",
+    "auto totem", "InventoryTotem", "inventorytotem", "HoverTotem",
+    "hover totem", "legittotem", "AutoPot", "autopot", "auto pot",
+    "AutoArmor", "autoarmor", "auto armor", "AutoPotRefill",
+    "ShieldDisabler", "ShieldBreaker", "AutoDoubleHand",
+    "autodoublehand", "auto double hand", "AutoClicker",
+    "AutoMace", "MaceSwap", "SpearSwap", "StunSlam",
+    "Donut", "JumpReset", "axespam", "axe spam", "AimAssist",
+    "aimassist", "aim assist", "triggerbot", "trigger bot",
+    "SilentRotations", "FakeInv", "FakeLag", "pingspoof",
+    "ping spoof", "fakePunch", "Fake Punch", "mace_swap",
+    "quick_strike", "macro_198", "stun_slam", "safe_anchor",
+    "double_anchor", "auto_pot_refill", "walksy_optimizer",
+    "key_pearl", "aim_assist", "auto_neth_pot", "auto_dtap",
+    "trigger_bot", "auto_web", "webmacro", "web macro",
+    "AntiWeb", "AutoWeb", "lvstrng", "dqrkis", "selfdestruct",
+    "self destruct", "WalksyCrystalOptimizerMod", "WalksyOptimizer",
+    "WalskyOptimizer", "autoCrystalPlaceClock", "AutoFirework",
+    "ElytraSwap", "FastXP", "FastExp", "NoJumpDelay", "PackSpoof",
+    "Antiknockback", "catlean", "AuthBypass", "obfuscatedAuth",
+    "LicenseCheckMixin", "BaseFinder", "invsee", "ItemExploit",
+    "FreezePlayer", "LWFH Crystal", "KeyPearl", "LootYeeter",
+    "FastPlace", "AutoBreach", "placeInterval", "breakInterval",
+    "stopOnKill", "activateOnRightClick", "holdCrystal",
+    "PlaceInterval", "BreakInterval", "StopOnKill",
+    "damagetick", "fakePunch", "ReachHack", "ExtendReach",
+    "LongReach", "HitboxExpand", "AntiKB", "NoKnockback",
+    "GrimVelocity", "GrimDisabler", "VelocitySpoof", "KBReduce",
+    "OffhandTotem", "TotemSwitch", "AutoWeapon", "AutoSword",
+    "AutoCity", "Burrow", "SelfTrap", "HoleFiller", "AntiSurround",
+    "AntiBurrow", "WTap", "TargetStrafe", "AutoGap", "AutoPearl",
     "FlyHack", "CreativeFlight", "BoatFly", "PacketFly", "AirJump",
-    "SpeedHack", "BHop", "BunnyHop",
-    "AntiFall", "NoFallDamage", "SafeFall",
-    "StepHack", "FastClimb", "AutoStep", "HighStep",
-    "WaterWalk", "LiquidWalk", "LavaWalk",
-    "NoSlow", "NoSlowdown", "NoWeb", "NoSoulSand",
-    "WallHack",
-    "ElytraSpeed", "InstantElytra",
+    "SpeedHack", "BHop", "BunnyHop", "AntiFall", "NoFallDamage",
+    "SafeFall", "StepHack", "FastClimb", "AutoStep", "HighStep",
+    "WaterWalk", "LiquidWalk", "LavaWalk", "NoSlow", "NoSlowdown",
+    "NoWeb", "NoSoulSand", "WallHack", "ElytraSpeed", "InstantElytra",
     "ScaffoldWalk", "FastBridge", "BuildHelper", "AutoBridge",
-    "Nuker", "NukerLegit", "InstantBreak",
-    "GhostHand", "NoSwing",
+    "Nuker", "NukerLegit", "InstantBreak", "GhostHand", "NoSwing",
     "PlaceAssist", "AirPlace", "AutoPlace", "InstantPlace",
     "PlayerESP", "MobESP", "ItemESP", "StorageESP", "ChestESP",
-    "Tracers", "NameTagsHack",
-    "XRayHack", "OreFinder", "CaveFinder", "OreESP",
-    "NewChunks", "ChunkBorders", "TunnelFinder",
-    "TargetHUD", "ReachDisplay",
-    "DoubleClicker", "JitterClick", "ButterflyClick", "CPSBoost",
-    "ChestStealer", "InvManager", "InvMovebypass",
-    "AutoSprint", "AntiAFK", "AutoRespawn",
-    "PopSwitch",
-    "FakeLatency", "FakePing", "SpoofRotation", "PositionSpoof",
-    "GameSpeed", "SpeedTimer",
-    "GrimBypass", "VulcanBypass", "MatrixBypass",
-    "AACBypass", "VerusDisabler", "IntaveBypass", "WatchdogBypass",
-    "PacketMine", "PacketWalk", "PacketSneak", "PacketCancel", "PacketDupe", "PacketSpam",
-    "SelfDestruct", "HideClient",
-    "SessionStealer", "TokenLogger", "TokenGrabber", "DiscordToken",
-    "RemoteAccess", "ReverseShell", "C2Server", "Backdoor", "KeyLogger",
-    "StashFinder", "TrailFinder",
-    "imgui.binding",
-    "JNativeHook", "GlobalScreen", "NativeKeyListener",
-    "client-refmap.json", "cheat-refmap.json",
-    "aHR0cDovL2FwaS5ub3ZhY2xpZW50LmxvbC93ZWJob29rLnR4dA==",
-    "meteordevelopment", "cc/novoline",
-    "com/alan/clients", "club/maxstats", "wtf/moonlight",
+    "Tracers", "NameTagsHack", "XRayHack", "OreFinder", "CaveFinder",
+    "OreESP", "NewChunks", "ChunkBorders", "TunnelFinder",
+    "TargetHUD", "ReachDisplay", "DoubleClicker", "JitterClick",
+    "ButterflyClick", "CPSBoost", "ChestStealer", "InvManager",
+    "InvMovebypass", "AutoSprint", "AntiAFK", "AutoRespawn",
+    "PopSwitch", "FakeLatency", "FakePing", "SpoofRotation",
+    "PositionSpoof", "GameSpeed", "SpeedTimer", "GrimBypass",
+    "VulcanBypass", "MatrixBypass", "AACBypass", "VerusDisabler",
+    "IntaveBypass", "WatchdogBypass", "PacketMine", "PacketWalk",
+    "PacketSneak", "PacketCancel", "PacketDupe", "PacketSpam",
+    "SelfDestruct", "HideClient", "SessionStealer", "TokenLogger",
+    "TokenGrabber", "DiscordToken", "RemoteAccess", "ReverseShell",
+    "C2Server", "Backdoor", "KeyLogger", "StashFinder", "TrailFinder",
+    "imgui.binding", "JNativeHook", "GlobalScreen", "NativeKeyListener",
+    "client-refmap.json", "cheat-refmap.json", "meteordevelopment",
+    "cc/novoline", "com/alan/clients", "club/maxstats", "wtf/moonlight",
     "me/zeroeightsix/kami", "net/ccbluex", "today/opai",
     "net/minecraft/injection", "org/chainlibs/module/impl/modules",
     "xyz/greaj", "com/cheatbreaker", "com/moonsworth",
     "doomsdayclient", "DoomsdayClient", "doomsday.jar",
-    "novaclient", "api.novaclient.lol",
-    "WalksyOptimizer", "LWFH Crystal",
+    "novaclient", "api.novaclient.lol", "WalksyOptimizer",
     "vape.gg", "vapeclient", "VapeClient", "VapeLite",
-    "intent.store", "IntentClient",
-    "rise.today", "riseclient.com",
+    "intent.store", "IntentClient", "rise.today", "riseclient.com",
     "meteor-client", "meteorclient", "meteordevelopment.meteorclient",
-    "liquidbounce", "fdp-client", "net.ccbluex",
-    "novoware", "novoclient",
-    "aristois", "impactclient", "azura",
+    "liquidbounce", "fdp-client", "net.ccbluex", "novoware",
+    "novoclient", "aristois", "impactclient", "azura",
     "pandaware", "skilled", "moonClient", "astolfo",
     "futureClient", "konas", "rusherhack", "inertia", "exhibition",
-    "dev.krypton", "dev/krypton", "skid.krypton", "skid/krypton",
-    "VirginClient", "virgin client",
-    "catlean", "CatleanClient", "catlean client",
-    "ArgonClient", "argon client",
-    "Asteria", "AsteriaClient", "asteria client",
+    "dev.krypton", "skid.krypton", "VirginClient", "virgin client",
+    "catlean", "CatleanClient", "catlean client", "ArgonClient",
+    "argon client", "Asteria", "AsteriaClient", "asteria client",
     "Prestige", "PrestigeClient", "prestige client", "prestigeclient.vip",
-    "gypsy", "GypsyClient", "gypsy client",
-    "Xenon", "XenonClient", "xenon client",
-    "GrimClient", "grim client",
-    "phantom-refmap.json",
+    "gypsy", "GypsyClient", "gypsy client", "Xenon", "XenonClient",
+    "xenon client", "GrimClient", "grim client", "phantom-refmap.json",
     "dqrkis.xyz", "Dqrkis Client"
 )
 
-# ---- SCAN FUNCTIONS ----
+# ============ SCAN FUNCTIONS ============
 
 function Scan-Environment {
     Write-Host "[*] Scanning environment..." -ForegroundColor Green
@@ -332,25 +179,21 @@ function Scan-Environment {
 function Scan-FileSystem {
     param($minecraftDir)
     Write-Host "[*] Scanning file system..." -ForegroundColor Green
-    
     if (-not (Test-Path $minecraftDir)) {
         Write-Warning "Minecraft directory not found: $minecraftDir"
         return
     }
-    
     $modsDir = Join-Path $minecraftDir "mods"
     if (Test-Path $modsDir) {
         $jarFiles = Get-ChildItem -Path $modsDir -Filter *.jar -ErrorAction SilentlyContinue
         foreach ($jar in $jarFiles) {
             $name = $jar.BaseName.ToLower()
-            
             foreach ($pattern in $suspiciousPatterns) {
                 if ($name -like "*$pattern*") {
                     Add-Finding -Id "POTENTIAL_JAR_CLIENT_FOUND" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Potential JAR Client Found" -Message "Pattern '$pattern' found in $($jar.Name)" -Evidence @{pattern=$pattern; file=$jar.Name}
                     break
                 }
             }
-            
             try {
                 $content = [System.IO.File]::ReadAllText($jar.FullName) -replace "`0",""
                 foreach ($str in $cheatStrings) {
@@ -359,19 +202,15 @@ function Scan-FileSystem {
                         break
                     }
                 }
-                # Base64 long strings
                 if ($content -match '[A-Za-z0-9+/=]{60,}') {
                     Add-Finding -Id "CUSTOM_STRING_FOUND_WARNING" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Custom String Found (Warning)" -Message "Base64 long string detected in $($jar.Name)" -Evidence @{string="Base64"; file=$jar.Name}
                 }
-                # Hex encoded sequences
                 if ($content -match '\\x[0-9A-Fa-f]{2}\\x[0-9A-Fa-f]{2}') {
                     Add-Finding -Id "CUSTOM_STRING_FOUND_WARNING" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Custom String Found (Warning)" -Message "Hex encoded sequence detected in $($jar.Name)" -Evidence @{string="Hex"; file=$jar.Name}
                 }
-                # Reflection calls
                 if ($content -match 'Class\.forName\(.*?[Cc]he') {
                     Add-Finding -Id "CUSTOM_STRING_FOUND_WARNING" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Custom String Found (Warning)" -Message "Reflection to cheat class detected in $($jar.Name)" -Evidence @{string="Reflection"; file=$jar.Name}
                 }
-                # Native library loading
                 if ($content -match 'System\.loadLibrary|System\.load') {
                     Add-Finding -Id "CUSTOM_STRING_FOUND_WARNING" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Custom String Found (Warning)" -Message "Native library loading detected in $($jar.Name)" -Evidence @{string="Native"; file=$jar.Name}
                 }
@@ -382,7 +221,6 @@ function Scan-FileSystem {
 
 function Scan-Registry {
     Write-Host "[*] Scanning registry..." -ForegroundColor Green
-    
     $regKeys = @("Vape", "Meteor", "LiquidBounce", "Wurst", "Sigma", "Novoware", "Prestige", "Doomsday", "Argon", "Krypton", "Delta", "Elysian", "Onyx", "Lumina", "Momentum", "RavenB++", "SkidBounce", "Skidcraft", "Backdoored", "LeuxBackdoor", "SalHackSkid", "GrassWare", "AllahWare", "BBCWare", "Arsenic", "Atrium", "BleachHack", "Caizm", "Coffee", "Cranberry", "Evangelion", "FDP", "Fog", "ForgeHax", "Huzuni", "Hydrogen", "Ikea", "Jex", "Kamiblue", "Konas", "Kura", "Lambda", "LavaHack", "Mercury", "Mint", "Mirai", "NClient", "Neptunium", "Ozark", "Raion", "Rebirth", "Rift", "Selene", "Seppuku", "Silence", "Spark", "Swift", "Tensor", "Tokyo", "Trollhack", "Vertex", "Vrpos", "Xulu", "Zeon", "ZeroTwo", "Zodiac")
     foreach ($key in $regKeys) {
         $keyPath = "HKCU:\Software\$key"
@@ -390,7 +228,6 @@ function Scan-Registry {
             Add-Finding -Id "FOUND_IN_REGISTRY" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Found In Registry" -Message "Registry key '$key' exists" -Evidence @{value="Key $keyPath"}
         }
     }
-    
     try {
         $prefetch = (Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" -Name "EnablePrefetcher" -ErrorAction SilentlyContinue).EnablePrefetcher
         if ($prefetch -eq 0) {
@@ -401,7 +238,6 @@ function Scan-Registry {
 
 function Scan-DNS {
     Write-Host "[*] Scanning DNS cache..." -ForegroundColor Green
-    
     $cheatDomains = @(
         "vape.gg", "vapeclient.com", "meteorclient.com", "liquidbounce.net",
         "wurstclient.net", "sigmaclient.com", "novoware.cc", "gamesense.pw",
@@ -428,7 +264,6 @@ function Scan-DNS {
 
 function Scan-Processes {
     Write-Host "[*] Scanning processes..." -ForegroundColor Green
-    
     $procs = Get-Process -ErrorAction SilentlyContinue
     foreach ($p in $procs) {
         $name = $p.ProcessName.ToLower()
@@ -439,7 +274,6 @@ function Scan-Processes {
             }
         }
     }
-    
     $javaProcs = $procs | Where-Object { $_.ProcessName -eq "javaw" -or $_.ProcessName -eq "java" }
     foreach ($jp in $javaProcs) {
         try {
@@ -510,7 +344,7 @@ function Scan-EventLog {
     }
 }
 
-# ---- MAIN ----
+# ============ MAIN ============
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "[*] Starting forensic scan..." -ForegroundColor Green
 Write-Host "[*] Target: $MinecraftDir" -ForegroundColor Green
@@ -530,7 +364,7 @@ if ($continue) {
     Scan-EventLog
 }
 
-# ---- GENERATE REPORT ----
+# ============ GENERATE REPORT ============
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "[*] Generating report..." -ForegroundColor Green
