@@ -21,21 +21,12 @@ if (-not $isAdmin) {
 }
 
 if (-not $ModsPath) {
-    $minecraftDirs = @(
-        "$env:APPDATA\.minecraft\mods",
-        "$env:USERPROFILE\AppData\Roaming\.minecraft\mods",
-        "$env:USERPROFILE\Documents\.minecraft\mods"
-    )
-    foreach ($dir in $minecraftDirs) {
-        if (Test-Path $dir) {
-            $ModsPath = $dir
-            break
-        }
-    }
-    if (-not $ModsPath) {
-        Write-Warning "Could not auto-detect mods folder. Please specify with -ModsPath parameter."
-        $ModsPath = Read-Host "Enter full path to your mods folder"
-    }
+    Write-Host "Auto-detection is disabled. Please paste the full path to the mods folder you want scanned." -ForegroundColor Yellow
+    $ModsPath = Read-Host "Mods folder path"
+}
+while ([string]::IsNullOrWhiteSpace($ModsPath)) {
+    Write-Warning "No path entered."
+    $ModsPath = Read-Host "Mods folder path"
 }
 
 Write-Host "[*] Mods folder: $ModsPath" -ForegroundColor Green
@@ -65,7 +56,11 @@ function Add-Finding {
     }
     $script:Findings += $finding
     $script:FindCount++
-    Write-Host "[$Tier] $Title" -ForegroundColor $(if ($Tier -eq "Detection") { "Red" } elseif ($Tier -eq "Warning") { "Yellow" } else { "White" })
+    $color = if ($Tier -eq "Detection") { "Red" } elseif ($Tier -eq "Warning") { "Yellow" } else { "White" }
+    Write-Host "[$Tier] $Title" -ForegroundColor $color
+    if ($Message) {
+        Write-Host "       -> $Message" -ForegroundColor Gray
+    }
     if ($Verbose -and $Evidence) {
         Write-Host "       Evidence: $($Evidence | Out-String)" -ForegroundColor Gray
     }
@@ -2888,7 +2883,7 @@ function Scan-FileSystem {
         $matched = $false
         foreach ($pattern in $suspiciousPatterns) {
             if ($name.Contains($pattern.ToLower())) {
-                Add-Finding -Id "POTENTIAL_JAR_CLIENT_FOUND" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Potential JAR Client Found" -Message "Suspicious pattern '$pattern' in filename: $($jar.Name)" -Evidence @{pattern=$pattern; file=$jar.Name}
+                Add-Finding -Id "POTENTIAL_JAR_CLIENT_FOUND" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Potential JAR Client Found" -Message "Suspicious pattern '$pattern' in filename: $($jar.Name)" -Evidence @{pattern=$pattern; file=$jar.Name; matchType="FilenameKnown"}
                 $matched = $true
                 break
             }
@@ -2897,7 +2892,7 @@ function Scan-FileSystem {
             foreach ($pattern in $obfuscatedPatterns) {
                 # patterns may be mixed case, use case-insensitive
                 if ($name.Contains($pattern.ToLower())) {
-                    Add-Finding -Id "POTENTIAL_JAR_CLIENT_FOUND" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Potential JAR Client Found (Obfuscated)" -Message "Obfuscated pattern in filename: $($jar.Name)" -Evidence @{pattern=$pattern; file=$jar.Name}
+                    Add-Finding -Id "POTENTIAL_JAR_CLIENT_FOUND" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Potential JAR Client Found (Obfuscated)" -Message "Obfuscated pattern in filename: $($jar.Name)" -Evidence @{pattern=$pattern; file=$jar.Name; matchType="FilenameObfuscated"}
                     break
                 }
             }
@@ -2907,24 +2902,34 @@ function Scan-FileSystem {
         try {
             $content = [System.IO.File]::ReadAllText($jar.FullName) -replace "`0",""
             $contentLower = $content.ToLower()
-            foreach ($pattern in $allContentPatterns) {
+            $contentMatched = $false
+            foreach ($pattern in $cheatStrings) {
                 if ($contentLower.Contains($pattern.ToLower())) {
-                    Add-Finding -Id "CUSTOM_STRING_FOUND_WARNING" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Custom String Found (Warning)" -Message "Pattern '$pattern' found in $($jar.Name)" -Evidence @{string=$pattern; file=$jar.Name}
+                    Add-Finding -Id "CUSTOM_STRING_FOUND_WARNING" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Known Cheat String Match" -Message "Known cheat-related string '$pattern' found in $($jar.Name)" -Evidence @{string=$pattern; file=$jar.Name; matchType="KnownCheatString"}
+                    $contentMatched = $true
                     break  # stop after first match to improve speed
+                }
+            }
+            if (-not $contentMatched) {
+                foreach ($pattern in $obfuscatedPatterns) {
+                    if ($contentLower.Contains($pattern.ToLower())) {
+                        Add-Finding -Id "CUSTOM_STRING_FOUND_WARNING" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Obfuscated Pattern Match" -Message "Obfuscated pattern '$pattern' found in $($jar.Name)" -Evidence @{string=$pattern; file=$jar.Name; matchType="ObfuscatedPattern"}
+                        break
+                    }
                 }
             }
             # Additional checks: base64, hex, reflection, native
             if ($content -match '[A-Za-z0-9+/=]{60,}') {
-                Add-Finding -Id "CUSTOM_STRING_FOUND_WARNING" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Custom String Found (Warning)" -Message "Base64 long string detected in $($jar.Name)" -Evidence @{string="Base64"; file=$jar.Name}
+                Add-Finding -Id "CUSTOM_STRING_FOUND_WARNING" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Base64-Encoded String Detected" -Message "Long Base64-like string detected in $($jar.Name)" -Evidence @{string="Base64"; file=$jar.Name; matchType="Base64"}
             }
             if ($content -match '\\x[0-9A-Fa-f]{2}\\x[0-9A-Fa-f]{2}') {
-                Add-Finding -Id "CUSTOM_STRING_FOUND_WARNING" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Custom String Found (Warning)" -Message "Hex encoded sequence detected in $($jar.Name)" -Evidence @{string="Hex"; file=$jar.Name}
+                Add-Finding -Id "CUSTOM_STRING_FOUND_WARNING" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Hex-Encoded Sequence Detected" -Message "Hex encoded sequence detected in $($jar.Name)" -Evidence @{string="Hex"; file=$jar.Name; matchType="Hex"}
             }
             if ($content -match 'Class\.forName\(.*?[Cc]he') {
-                Add-Finding -Id "CUSTOM_STRING_FOUND_WARNING" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Custom String Found (Warning)" -Message "Reflection to cheat class detected in $($jar.Name)" -Evidence @{string="Reflection"; file=$jar.Name}
+                Add-Finding -Id "CUSTOM_STRING_FOUND_WARNING" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Reflection To Cheat Class Detected" -Message "Reflection to cheat class detected in $($jar.Name)" -Evidence @{string="Reflection"; file=$jar.Name; matchType="Reflection"}
             }
             if ($content -match 'System\.loadLibrary|System\.load') {
-                Add-Finding -Id "CUSTOM_STRING_FOUND_WARNING" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Custom String Found (Warning)" -Message "Native library loading detected in $($jar.Name)" -Evidence @{string="Native"; file=$jar.Name}
+                Add-Finding -Id "CUSTOM_STRING_FOUND_WARNING" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Native Library Load Detected" -Message "Native library loading detected in $($jar.Name)" -Evidence @{string="Native"; file=$jar.Name; matchType="Native"}
             }
         } catch {}
     }
@@ -2937,7 +2942,7 @@ function Scan-Registry {
     foreach ($key in $regKeys) {
         $keyPath = "HKCU:\Software\$key"
         if (Test-Path $keyPath) {
-            Add-Finding -Id "FOUND_IN_REGISTRY" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Found In Registry" -Message "Registry key '$key' exists" -Evidence @{value="Key $keyPath"}
+            Add-Finding -Id "FOUND_IN_REGISTRY" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Found In Registry" -Message "Registry key '$key' exists" -Evidence @{value="Key $keyPath"; matchType="RegistryKey"}
         }
     }
     try {
@@ -2966,7 +2971,7 @@ function Scan-DNS {
         foreach ($domain in $cheatDomains) {
             foreach ($entry in $dns) {
                 if ($entry -like "*$domain*") {
-                    Add-Finding -Id "FOUND_IN_DNSCACHE" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Found In Dnscache" -Message "Domain '$domain' found in DNS cache" -Evidence @{domain=$domain}
+                    Add-Finding -Id "FOUND_IN_DNSCACHE" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Found In Dnscache" -Message "Domain '$domain' found in DNS cache" -Evidence @{domain=$domain; matchType="DnsCache"}
                     break
                 }
             }
@@ -2981,7 +2986,7 @@ function Scan-Processes {
         $name = $p.ProcessName.ToLower()
         foreach ($str in $cheatStrings) {
             if ($name.Contains($str.ToLower())) {
-                Add-Finding -Id "CHEAT_FOUND_IN_WINDOWS_SERVICE" -Tier "Detection" -Category "Cheat Discovery in Memory" -Title "Cheat Found In Windows Service Memory" -Message "Cheat process '$str' found running" -Evidence @{service=$str; process=$p.ProcessName}
+                Add-Finding -Id "CHEAT_FOUND_IN_WINDOWS_SERVICE" -Tier "Detection" -Category "Cheat Discovery in Memory" -Title "Cheat Found In Windows Service Memory" -Message "Cheat process '$str' found running" -Evidence @{service=$str; process=$p.ProcessName; matchType="RunningProcess"}
                 break
             }
         }
@@ -2992,13 +2997,13 @@ function Scan-Processes {
             $cmdLine = (Get-CimInstance -ClassName Win32_Process -Filter "ProcessId = $($jp.Id)" -ErrorAction SilentlyContinue).CommandLine
             if ($cmdLine) {
                 if ($cmdLine -match "-Dclient\.brand=(Wurst|Impact|Meteor|Sigma|LiquidBounce)") {
-                    Add-Finding -Id "POTENTIAL_MALICIOUS_JVM_ARG" -Tier "Detection" -Category "Cheat Execution Evidence" -Title "Potential Malicious JVM Argument Found" -Message "JVM arg: $($Matches[0])" -Evidence @{arg=$Matches[0]}
+                    Add-Finding -Id "POTENTIAL_MALICIOUS_JVM_ARG" -Tier "Detection" -Category "Cheat Execution Evidence" -Title "Potential Malicious JVM Argument Found" -Message "JVM arg: $($Matches[0])" -Evidence @{arg=$Matches[0]; matchType="JvmArgClientBrand"}
                 }
                 if ($cmdLine -match "-D(xray|fly|speed|killaura|reach|scaffold)") {
-                    Add-Finding -Id "POTENTIAL_MALICIOUS_JVM_ARG" -Tier "Detection" -Category "Cheat Execution Evidence" -Title "Potential Malicious JVM Argument Found" -Message "JVM arg: $($Matches[0])" -Evidence @{arg=$Matches[0]}
+                    Add-Finding -Id "POTENTIAL_MALICIOUS_JVM_ARG" -Tier "Detection" -Category "Cheat Execution Evidence" -Title "Potential Malicious JVM Argument Found" -Message "JVM arg: $($Matches[0])" -Evidence @{arg=$Matches[0]; matchType="JvmArgFeature"}
                 }
                 if ($cmdLine -match "-Djava\.security\.manager=" -or $cmdLine -match "-Xbootclasspath") {
-                    Add-Finding -Id "POTENTIAL_MALICIOUS_JVM_ARG" -Tier "Detection" -Category "Cheat Execution Evidence" -Title "Potential Malicious JVM Argument Found" -Message "Security manager tampering detected" -Evidence @{arg="Security manager tamper"}
+                    Add-Finding -Id "POTENTIAL_MALICIOUS_JVM_ARG" -Tier "Detection" -Category "Cheat Execution Evidence" -Title "Potential Malicious JVM Argument Found" -Message "Security manager tampering detected" -Evidence @{arg="Security manager tamper"; matchType="JvmArgSecurityManager"}
                 }
             }
         } catch {}
@@ -3050,7 +3055,7 @@ function Scan-EventLog {
         try {
             $events = Get-WinEvent -LogName $log -MaxEvents 1 -ErrorAction SilentlyContinue
             if (-not $events) {
-                Add-Finding -Id "CLEARED_EVENT_LOG_SINCE_LOGON" -Tier "Warning" -Category "EventLog Tampering" -Title "Cleared Event Log Since Logon" -Message "Event log '$log' appears empty" -Evidence @{log=$log}
+                Add-Finding -Id "CLEARED_EVENT_LOG_SINCE_LOGON" -Tier "Warning" -Category "EventLog Tampering" -Title "Cleared Event Log Since Logon" -Message "Event log '$log' appears empty" -Evidence @{log=$log; matchType="EventLog"}
             }
         } catch {}
     }
