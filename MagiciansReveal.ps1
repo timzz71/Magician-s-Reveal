@@ -1,6 +1,7 @@
 # ============================================================
-#  MAGICIAN'S REVEAL  v3.6
+#  MAGICIAN'S REVEAL  v3.7
 #  Professional Minecraft Forensic Scanner
+#  Broad cheat client detection
 # ============================================================
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -9,7 +10,7 @@ chcp 65001 | Out-Null
 Clear-Host
 
 Write-Host ""
-Write-Host "  MAGICIAN'S REVEAL  v3.6" -ForegroundColor Cyan
+Write-Host "  MAGICIAN'S REVEAL  v3.7" -ForegroundColor Cyan
 Write-Host "  Professional Minecraft Forensic Scanner" -ForegroundColor DarkCyan
 Write-Host ""
 
@@ -58,10 +59,9 @@ if (-not (Test-Path $modsPath -PathType Container)) {
 Write-Host "  Scanning: $modsPath" -ForegroundColor DarkCyan
 Write-Host ""
 
-# ---------- High-signal cheat indicators only ----------
-# Carefully selected from your list + previous real clients
+# ---------- Comprehensive high-signal cheat indicators ----------
 $cheatStrings = @(
-    # Strong feature names
+    # === Combat / Utility Modules ===
     "AutoCrystal","AutoHitCrystal","AutoAnchor","DoubleAnchor","SafeAnchor","AirAnchor",
     "AutoTotem","InventoryTotem","HoverTotem","LegitTotem","AutoPot","AutoPotRefill","AutoArmor",
     "ShieldBreaker","ShieldDisabler","AutoDoubleHand","AutoMace","MaceSwap","StunSlam","AxeSpam",
@@ -70,31 +70,57 @@ $cheatStrings = @(
     "PackSpoof","Antiknockback","AuthBypass","obfuscatedAuth","LicenseCheckMixin","BaseFinder",
     "SelfDestruct","HideClient","SessionStealer","TokenLogger","TokenGrabber","DiscordToken",
     "RemoteAccess","ReverseShell","C2Server","Backdoor","KeyLogger","StashFinder","TrailFinder",
-    "KillAura","ClickAura","CrystalAura","AnchorAura","BedAura","ReachHack","AntiKB","NoKnockback",
-    "PlayerESP","XRayHack","ScaffoldWalk","AutoClicker","BowAim","Criticals",
-    "HitboxExpand","HitboxExpander","ReachHudElement","ReachDisplay",
+    "KillAura","ClickAura","MultiAura","ForceField","LegitAura","CrystalAura","AnchorAura",
+    "BedAura","AutoBed","BedBomb","BowAimbot","BowSpam","AutoBow","AutoCrit","CritBypass",
+    "AlwaysCrit","CriticalHit","ReachHack","ExtendReach","LongReach","HitboxExpand","HitboxExpander",
+    "AntiKB","NoKnockback","GrimVelocity","VelocitySpoof","KBReduce","OffhandTotem","TotemSwitch",
+    "AutoWeapon","AutoSword","AutoCity","Burrow","SelfTrap","HoleFiller","AntiSurround","AntiBurrow",
+    "TargetStrafe","AutoGap","AutoPearl","FlyHack","CreativeFlight","BoatFly","PacketFly","AirJump",
+    "SpeedHack","BHop","BunnyHop","AntiFall","NoFallDamage","SafeFall","StepHack","FastClimb",
+    "AutoStep","HighStep","WaterWalk","LiquidWalk","LavaWalk","NoSlow","NoSlowdown","NoWeb",
+    "NoSoulSand","WallHack","ElytraSpeed","InstantElytra","ScaffoldWalk","FastBridge","BuildHelper",
+    "AutoBridge","Nuker","NukerLegit","InstantBreak","GhostHand","NoSwing","PlaceAssist","AirPlace",
+    "AutoPlace","InstantPlace","PlayerESP","MobESP","ItemESP","StorageESP","ChestESP","Tracers",
+    "NameTagsHack","XRayHack","OreFinder","CaveFinder","OreESP","NewChunks","ChunkBorders",
+    "TunnelFinder","TargetHUD","ReachDisplay","ReachHudElement","DoubleClicker","JitterClick",
+    "ButterflyClick","CPSBoost","ChestStealer","InvManager","InvMovebypass","AutoSprint","AntiAFK",
+    "AutoRespawn","PopSwitch","FakeLatency","FakePing","SpoofRotation","PositionSpoof","GameSpeed",
+    "SpeedTimer","GrimBypass","VulcanBypass","MatrixBypass","AACBypass","VerusDisabler",
+    "IntaveBypass","WatchdogBypass","PacketMine","PacketWalk","PacketSneak","PacketCancel",
+    "PacketDupe","PacketSpam","NoJumpDelay","AutoClicker","BowAim","Criticals",
 
-    # Real client / obfuscator signatures (from your files + list)
+    # === Known Clients / Packages / Authors ===
     "com/slither/cyemer","com/slither/velaris","dev/lvstrng/aidsfuscator",
     "dev.krypton","skid.krypton","dev.virel","orchard","org.chainlibs.module.impl.modules",
-    "meteordevelopment","meteorclient","liquidbounce","fdp-client","net.ccbluex",
-    "doomsdayclient","novaclient","api.novaclient.lol","vape.gg","vapeclient","VapeLite",
-    "intent.store","IntentClient","rise.today","riseclient.com","aristois","impactclient",
-    "azura","pandaware","skilled","moonClient","astolfo","futureClient","konas","rusherhack",
-    "inertia","exhibition","catlean","CatleanClient","ArgonClient","Asteria","AsteriaClient",
-    "PrestigeClient","prestigeclient.vip","gypsy","GypsyClient","XenonClient","GrimClient",
-    "dqrkis.xyz","Dqrkis Client","WalksyOptimizer","WalksyCrystalOptimizerMod","WalskyOptimizer",
+    "meteordevelopment","meteorclient","meteor-client","liquidbounce","fdp-client","net.ccbluex",
+    "doomsdayclient","DoomsdayClient","novaclient","api.novaclient.lol","novoware",
+    "vape.gg","vapeclient","VapeClient","VapeLite","intent.store","IntentClient",
+    "rise.today","riseclient.com","aristois","impactclient","azura","pandaware","skilled",
+    "moonClient","astolfo","futureClient","konas","rusherhack","inertia","exhibition",
+    "catlean","CatleanClient","ArgonClient","Asteria","AsteriaClient","PrestigeClient",
+    "prestigeclient.vip","gypsy","GypsyClient","XenonClient","GrimClient","dqrkis.xyz",
+    "Dqrkis Client","WalksyOptimizer","WalksyCrystalOptimizerMod","WalskyOptimizer",
     "LWFH Crystal","xyz.greaj","imgui.gl3","imgui.glfw","jnativehook","JNativeHook",
     "GlobalScreen","NativeKeyListener","phantom-refmap.json","client-refmap.json","cheat-refmap.json",
     "ClientPlayerInteractionManagerAccessor","ClientPlayerEntityMixim","dev.gambleclient",
-    "VelarisAuth","NativeObf","TriggerBotReadyEvent",
+    "VelarisAuth","NativeObf","TriggerBotReadyEvent","sixtwo/","fivefive/",
+    "mixin/accessors/ItemInHandRendererAccessor","startAttackPre","startUseItemPost",
+    "wurst","sigma","novoline","impact","wurstclient","sigma5","sigma6","aristois",
+    "liquidbounce","fdpclient","meteorclient","rusherhack","konasclient","futureclient",
+    "inertia","exhibition","moonlight","maxstats","alan clients","zeroeightsix","kami",
+    "bleachhack","huzuni","kamiblue","lambda","seppuku","vertex","xulu","zeon",
+    "doomsday","prestige","asteria","catlean","argon","xenon","gypsy","dqrkis","walksy",
+    "198macros","macro198","stunslam","safeanchor","doubleanchor","keypearl","looteeter",
 
-    # High-signal items carefully taken from the long list you sent
-    "sixtwo/","fivefive/","mixin/accessors/ItemInHandRendererAccessor",
-    "startAttackPre","startUseItemPost","sixtwo/bf.class","sixtwo/ng.class",
-    "sixtwo/aaa","sixtwo/abb","sixtwo/acc","sixtwo/add","sixtwo/aee",
-    "sixtwo/app","sixtwo/aqq","sixtwo/arr","sixtwo/ass","sixtwo/att",
-    "sixtwo/auu","sixtwo/avv","sixtwo/aww","sixtwo/axx","sixtwo/ayy","sixtwo/azz"
+    # === Domains / URLs / Auth ===
+    "vape.gg","intent.store","rise.today","riseclient.com","prestigeclient.vip",
+    "dqrkis.xyz","api.novaclient.lol","doomsdayclient.com","meteorclient.com",
+    "liquidbounce.net","wurstclient.net","impactclient.net","aristois.net",
+
+    # === Common obfuscation / injection markers ===
+    "LicenseCheckMixin","obfuscatedAuth","AuthBypass","SelfDestruct","HideClient",
+    "SessionStealer","TokenLogger","TokenGrabber","DiscordToken","RemoteAccess",
+    "ReverseShell","C2Server","Backdoor","KeyLogger"
 )
 
 # ---------- Helpers ----------
@@ -110,7 +136,6 @@ function Invoke-ModScan {
         $allEntries = [System.Collections.Generic.List[object]]::new()
         foreach ($e in $archive.Entries) { $allEntries.Add($e) }
 
-        # Nested JARs
         foreach ($nj in ($archive.Entries | Where-Object { $_.FullName -match "^META-INF/jars/.+\.jar$" })) {
             try {
                 $ms = New-Object System.IO.MemoryStream
@@ -259,13 +284,13 @@ else {
 }
 
 Write-Host "  SUMMARY" -ForegroundColor Cyan
-Write-Host "  Total scanned     : $($jarFiles.Count)" -ForegroundColor White
-Write-Host "  Clean             : $cleanCount" -ForegroundColor Green
-Write-Host "  Suspicious        : $($suspiciousMods.Count)" -ForegroundColor Red
-Write-Host "  Heavily obfuscated: $($obfuscatedMods.Count)" -ForegroundColor Yellow
-Write-Host "  Minecraft         : Running (PID $($proc.Id))" -ForegroundColor Green
+Write-Host "  Total scanned      : $($jarFiles.Count)" -ForegroundColor White
+Write-Host "  Clean              : $cleanCount" -ForegroundColor Green
+Write-Host "  Suspicious         : $($suspiciousMods.Count)" -ForegroundColor Red
+Write-Host "  Heavily obfuscated : $($obfuscatedMods.Count)" -ForegroundColor Yellow
+Write-Host "  Minecraft          : Running (PID $($proc.Id))" -ForegroundColor Green
 Write-Host ""
-Write-Host "  Scan complete – Magician's Reveal v3.6" -ForegroundColor DarkCyan
+Write-Host "  Scan complete – Magician's Reveal v3.7" -ForegroundColor DarkCyan
 Write-Host ""
 Write-Host "  Press any key to exit..." -ForegroundColor DarkGray
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
