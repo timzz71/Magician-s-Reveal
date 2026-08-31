@@ -1,20 +1,23 @@
 # ============================================================
-#  MAGICIAN'S REVEAL  v3.6
+#  MAGICIAN'S REVEAL  v3.5
 #  Professional Minecraft Forensic Scanner
+#  Fixed false positives on Reach / Hitboxes
 # ============================================================
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-$OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding  = [System.Text.Encoding]::UTF8
+$OutputEncoding           = [System.Text.Encoding]::UTF8
 chcp 65001 | Out-Null
 Clear-Host
 
-Write-Host ""
-Write-Host "  MAGICIAN'S REVEAL  v3.6" -ForegroundColor Cyan
-Write-Host "  Professional Minecraft Forensic Scanner" -ForegroundColor DarkCyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "  MAGICIAN'S REVEAL - v3.5" -ForegroundColor Cyan
+Write-Host "  Professional Minecraft Forensic Scanner" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# ---------- Minecraft check ----------
-Write-Host "  Checking Minecraft process..." -ForegroundColor Gray
+# ---------- 1. Minecraft must be running ----------
+Write-Host "[*] Checking Minecraft process..." -ForegroundColor Cyan
 
 $mcProcess = Get-Process javaw -ErrorAction SilentlyContinue
 if (-not $mcProcess) { $mcProcess = Get-Process java -ErrorAction SilentlyContinue }
@@ -22,10 +25,10 @@ if (-not $mcProcess) { $mcProcess = Get-Process java -ErrorAction SilentlyContin
 if (-not $mcProcess) {
     Write-Host ""
     Write-Host "  [!]  MINECRAFT IS NOT RUNNING" -ForegroundColor Red
-    Write-Host "  This session is INVALID." -ForegroundColor Red
-    Write-Host "  Start Minecraft and run the scanner again." -ForegroundColor Yellow
+    Write-Host "  This screenshot / session is INVALID." -ForegroundColor Red
+    Write-Host "  Please start Minecraft and run the scanner again." -ForegroundColor Yellow
     Write-Host ""
-    Write-Host "  Press any key to exit..." -ForegroundColor DarkGray
+    Write-Host "Press any key to exit..." -ForegroundColor Gray
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     exit 1
 }
@@ -34,34 +37,37 @@ $proc      = $mcProcess | Select-Object -First 1
 $startTime = $proc.StartTime
 $uptime    = (Get-Date) - $startTime
 
-Write-Host "  Minecraft is running" -ForegroundColor Green
-Write-Host "  Process : $($proc.Name)  |  PID : $($proc.Id)" -ForegroundColor DarkGray
-Write-Host "  Started : $startTime" -ForegroundColor DarkGray
-Write-Host "  Uptime  : $($uptime.Hours)h $($uptime.Minutes)m $($uptime.Seconds)s" -ForegroundColor DarkGray
+Write-Host "  [+]  Minecraft is running" -ForegroundColor Green
+Write-Host "      Process : $($proc.Name)" -ForegroundColor Gray
+Write-Host "      PID     : $($proc.Id)" -ForegroundColor Gray
+Write-Host "      Started : $startTime" -ForegroundColor Gray
+Write-Host "      Uptime  : $($uptime.Hours)h $($uptime.Minutes)m $($uptime.Seconds)s" -ForegroundColor Gray
 Write-Host ""
 
-# ---------- Mods path ----------
-Write-Host "  Enter path to the mods folder (press Enter for default):" -ForegroundColor Gray
-$modsPath = Read-Host "  PATH"
+# ---------- 2. Mods path ----------
+Write-Host "Enter path to the mods folder: " -NoNewline
+Write-Host "(press Enter for default)" -ForegroundColor DarkGray
+$modsPath = Read-Host "PATH"
 
 if ([string]::IsNullOrWhiteSpace($modsPath)) {
     $modsPath = "$env:USERPROFILE\AppData\Roaming\.minecraft\mods"
+    Write-Host "[*] Using default: $modsPath" -ForegroundColor White
 }
 
 if (-not (Test-Path $modsPath -PathType Container)) {
-    Write-Host "  Invalid path: $modsPath" -ForegroundColor Red
-    Write-Host "  Press any key to exit..."
+    Write-Host "[-] Invalid path: $modsPath" -ForegroundColor Red
+    Write-Host "Press any key to exit..."
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     exit 1
 }
 
-Write-Host "  Scanning: $modsPath" -ForegroundColor DarkCyan
+Write-Host "[*] Mods folder: $modsPath" -ForegroundColor Green
 Write-Host ""
 
-# ---------- High-signal cheat indicators only ----------
-# Carefully selected from your list + previous real clients
+# ---------- 3. Strong detection lists (no more weak generics) ----------
+
 $cheatStrings = @(
-    # Strong feature names
+    # Strong combat modules only
     "AutoCrystal","AutoHitCrystal","AutoAnchor","DoubleAnchor","SafeAnchor","AirAnchor",
     "AutoTotem","InventoryTotem","HoverTotem","LegitTotem","AutoPot","AutoPotRefill","AutoArmor",
     "ShieldBreaker","ShieldDisabler","AutoDoubleHand","AutoMace","MaceSwap","StunSlam","AxeSpam",
@@ -74,7 +80,7 @@ $cheatStrings = @(
     "PlayerESP","XRayHack","ScaffoldWalk","AutoClicker","BowAim","Criticals",
     "HitboxExpand","HitboxExpander","ReachHudElement","ReachDisplay",
 
-    # Real client / obfuscator signatures (from your files + list)
+    # Real client packages / signatures
     "com/slither/cyemer","com/slither/velaris","dev/lvstrng/aidsfuscator",
     "dev.krypton","skid.krypton","dev.virel","orchard","org.chainlibs.module.impl.modules",
     "meteordevelopment","meteorclient","liquidbounce","fdp-client","net.ccbluex",
@@ -87,14 +93,7 @@ $cheatStrings = @(
     "LWFH Crystal","xyz.greaj","imgui.gl3","imgui.glfw","jnativehook","JNativeHook",
     "GlobalScreen","NativeKeyListener","phantom-refmap.json","client-refmap.json","cheat-refmap.json",
     "ClientPlayerInteractionManagerAccessor","ClientPlayerEntityMixim","dev.gambleclient",
-    "VelarisAuth","NativeObf","TriggerBotReadyEvent",
-
-    # High-signal items carefully taken from the long list you sent
-    "sixtwo/","fivefive/","mixin/accessors/ItemInHandRendererAccessor",
-    "startAttackPre","startUseItemPost","sixtwo/bf.class","sixtwo/ng.class",
-    "sixtwo/aaa","sixtwo/abb","sixtwo/acc","sixtwo/add","sixtwo/aee",
-    "sixtwo/app","sixtwo/aqq","sixtwo/arr","sixtwo/ass","sixtwo/att",
-    "sixtwo/auu","sixtwo/avv","sixtwo/aww","sixtwo/axx","sixtwo/ayy","sixtwo/azz"
+    "VelarisAuth","NativeObf","TriggerBotReadyEvent"
 )
 
 # ---------- Helpers ----------
@@ -107,6 +106,7 @@ function Invoke-ModScan {
 
     try {
         $archive = [System.IO.Compression.ZipFile]::OpenRead($FilePath)
+
         $allEntries = [System.Collections.Generic.List[object]]::new()
         foreach ($e in $archive.Entries) { $allEntries.Add($e) }
 
@@ -124,14 +124,20 @@ function Invoke-ModScan {
 
         foreach ($entry in $allEntries) {
             $name = $entry.FullName
+
             foreach ($p in $cheatStrings) {
-                if ($name -match [regex]::Escape($p)) { [void]$found.Add($p) }
+                if ($name -match [regex]::Escape($p)) {
+                    [void]$found.Add($p)
+                }
             }
+
+            # Strong patterns from real cheats
             if ($name -match 'dev/lvstrng/aidsfuscator') { [void]$found.Add("dev/lvstrng/aidsfuscator") }
             if ($name -match 'MixinExperienceOrb')       { [void]$found.Add("MixinExperienceOrb*") }
             if ($name -match '^a/Clumps')                 { [void]$found.Add("a/Clumps (obfuscated)") }
         }
 
+        # Content scan
         foreach ($entry in $allEntries) {
             if ($entry.FullName -match '\.(class|json)$' -or $entry.FullName -match 'MANIFEST\.MF') {
                 try {
@@ -139,30 +145,39 @@ function Invoke-ModScan {
                     $entry.Open().CopyTo($ms)
                     $bytes = $ms.ToArray()
                     $ms.Dispose()
-                    $text = [System.Text.Encoding]::UTF8.GetString($bytes) + [System.Text.Encoding]::ASCII.GetString($bytes)
+
+                    $text = [System.Text.Encoding]::UTF8.GetString($bytes) +
+                            [System.Text.Encoding]::ASCII.GetString($bytes)
+
                     foreach ($s in $cheatStrings) {
-                        if ($text.Contains($s)) { [void]$found.Add($s) }
+                        if ($text.Contains($s)) {
+                            [void]$found.Add($s)
+                        }
                     }
                 } catch {}
             }
         }
         $archive.Dispose()
     } catch {}
+
     return $found
 }
 
 function Get-ObfuscationFlags {
     param([string]$FilePath)
+
     $flags = [System.Collections.Generic.List[string]]::new()
     try {
         $archive = [System.IO.Compression.ZipFile]::OpenRead($FilePath)
-        $totalClass = 0; $numeric = 0; $unicode = 0; $singleLetter = 0; $japanese = 0; $fullwidth = 0; $singleCharPkg = 0
+        $totalClass = 0; $numeric = 0; $unicode = 0; $singleLetter = 0; $japanese = 0; $fullwidth = 0
+        $singleCharPkg = 0
 
         foreach ($entry in $archive.Entries) {
             if ($entry.FullName -match '\.class$') {
                 $totalClass++
                 $className = [System.IO.Path]::GetFileNameWithoutExtension(($entry.FullName -split '/')[-1])
                 $pkg = ($entry.FullName -replace '\.class$','' -split '/')[0]
+
                 if ($className -match '^\d+$')                         { $numeric++ }
                 if ($className -match '[^\x00-\x7F]')                  { $unicode++ }
                 if ($className -match '^[a-zA-Z]$')                    { $singleLetter++ }
@@ -172,36 +187,38 @@ function Get-ObfuscationFlags {
             }
         }
         $archive.Dispose()
+
         if ($totalClass -lt 8) { return $flags }
 
         $pct = { param($n) [math]::Round(($n / $totalClass) * 100) }
-        if ((& $pct $numeric) -ge 25)      { $flags.Add("Heavy numeric class names ($((& $pct $numeric))%)") }
-        if ((& $pct $unicode) -ge 15)      { $flags.Add("Unicode class names ($((& $pct $unicode))%)") }
-        if ((& $pct $singleLetter) -ge 20) { $flags.Add("Single-letter class names ($((& $pct $singleLetter))%)") }
-        if ($singleCharPkg -ge 10)         { $flags.Add("Single-letter package paths (a/b/c style)") }
-        if ($japanese -gt 0)               { $flags.Add("Japanese obfuscation ($japanese classes)") }
-        if ($fullwidth -gt 0)              { $flags.Add("Fullwidth Unicode class names ($fullwidth classes)") }
+
+        if ((& $pct $numeric) -ge 25)       { $flags.Add("Heavy numeric class names ($((& $pct $numeric))%)") }
+        if ((& $pct $unicode) -ge 15)       { $flags.Add("Unicode / non-ASCII class names ($((& $pct $unicode))%)") }
+        if ((& $pct $singleLetter) -ge 20)  { $flags.Add("Single-letter class names ($((& $pct $singleLetter))%)") }
+        if ($singleCharPkg -ge 10)          { $flags.Add("Single-letter package paths (a/b/c style) - $singleCharPkg") }
+        if ($japanese -gt 0)                { $flags.Add("Japanese obfuscation detected ($japanese classes)") }
+        if ($fullwidth -gt 0)               { $flags.Add("Fullwidth Unicode class names ($fullwidth classes)") }
     } catch {}
     return $flags
 }
 
-# ---------- Scan ----------
+# ---------- Main scan ----------
 $jarFiles = Get-ChildItem -Path $modsPath -Filter *.jar -ErrorAction SilentlyContinue
 if ($jarFiles.Count -eq 0) {
-    Write-Host "  No JAR files found." -ForegroundColor Yellow
-    Write-Host "  Press any key to exit..."
+    Write-Host "[!] No JAR files found." -ForegroundColor Yellow
+    Write-Host "Press any key to exit..."
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     exit 0
 }
 
-Write-Host "  Found $($jarFiles.Count) JAR files" -ForegroundColor DarkCyan
+Write-Host "[*] Found $($jarFiles.Count) JAR files to scan" -ForegroundColor Green
 Write-Host ""
 
 $suspiciousMods = @()
 $obfuscatedMods = @()
 $cleanCount = 0
-$idx = 0
 
+$idx = 0
 foreach ($jar in $jarFiles) {
     $idx++
     Write-Host "`r  Scanning [$idx/$($jarFiles.Count)] $($jar.Name)..." -NoNewline
@@ -210,62 +227,86 @@ foreach ($jar in $jarFiles) {
     $obfFlags = Get-ObfuscationFlags -FilePath $jar.FullName
 
     if ($matches.Count -gt 0) {
-        $suspiciousMods += [PSCustomObject]@{ FileName = $jar.Name; Matches = $matches }
+        $suspiciousMods += [PSCustomObject]@{
+            FileName = $jar.Name
+            Matches  = $matches
+        }
     }
     elseif ($obfFlags.Count -gt 0) {
-        $obfuscatedMods += [PSCustomObject]@{ FileName = $jar.Name; Flags = $obfFlags }
+        $obfuscatedMods += [PSCustomObject]@{
+            FileName = $jar.Name
+            Flags    = $obfFlags
+        }
     }
     else {
         $cleanCount++
     }
 }
-Write-Host "`r$(' ' * 80)`r" -NoNewline
+Write-Host "`r$(' ' * 90)`r" -NoNewline
 
-# ---------- Results ----------
+# ---------- Report ----------
 Write-Host ""
-Write-Host "  RESULTS" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "  SCAN RESULTS" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host ""
+
+Write-Host "  MINECRAFT PROCESS" -ForegroundColor White
+Write-Host "  --------------------------------------" -ForegroundColor DarkGray
+Write-Host "  Status   : RUNNING" -ForegroundColor Green
+Write-Host "  Process  : $($proc.Name)" -ForegroundColor Gray
+Write-Host "  PID      : $($proc.Id)" -ForegroundColor Gray
+Write-Host "  Started  : $startTime" -ForegroundColor Gray
+Write-Host "  Uptime   : $($uptime.Hours)h $($uptime.Minutes)m $($uptime.Seconds)s" -ForegroundColor Gray
 Write-Host ""
 
 if ($suspiciousMods.Count -eq 0 -and $obfuscatedMods.Count -eq 0) {
-    Write-Host "  No cheat indicators found." -ForegroundColor Green
+    Write-Host "  [+]  No cheat indicators found." -ForegroundColor Green
     Write-Host "  All $cleanCount mods appear clean." -ForegroundColor Green
 }
 else {
     if ($suspiciousMods.Count -gt 0) {
-        Write-Host "  SUSPICIOUS MODS ($($suspiciousMods.Count))" -ForegroundColor Red
+        Write-Host "  [!]  SUSPICIOUS MODS  ($($suspiciousMods.Count))" -ForegroundColor Red
+        Write-Host "  --------------------------------------" -ForegroundColor DarkRed
         Write-Host ""
 
         foreach ($mod in $suspiciousMods) {
-            Write-Host "  $($mod.FileName)" -ForegroundColor Yellow
-            Write-Host "  Detected!" -ForegroundColor Red
+            Write-Host "  +-- $($mod.FileName)" -ForegroundColor Yellow
+            Write-Host "  |" -ForegroundColor DarkRed
+            Write-Host "  |  Detected!" -ForegroundColor Red
             foreach ($m in ($mod.Matches | Sort-Object)) {
-                Write-Host "    • $m" -ForegroundColor Red
+                Write-Host "  |    • $m" -ForegroundColor Red
             }
+            Write-Host "  +------------------------------------" -ForegroundColor DarkRed
             Write-Host ""
         }
     }
 
     if ($obfuscatedMods.Count -gt 0) {
-        Write-Host "  HEAVILY OBFUSCATED ($($obfuscatedMods.Count))" -ForegroundColor DarkYellow
+        Write-Host "  [!]  HEAVILY OBFUSCATED (no known cheat strings)" -ForegroundColor DarkYellow
+        Write-Host "  --------------------------------------" -ForegroundColor DarkYellow
         Write-Host ""
         foreach ($mod in $obfuscatedMods) {
-            Write-Host "  $($mod.FileName)" -ForegroundColor Yellow
+            Write-Host "  +-- $($mod.FileName)" -ForegroundColor Yellow
             foreach ($f in $mod.Flags) {
-                Write-Host "    > $f" -ForegroundColor DarkYellow
+                Write-Host "  |    > $f" -ForegroundColor Yellow
             }
+            Write-Host "  +------------------------------------" -ForegroundColor DarkYellow
             Write-Host ""
         }
     }
 }
 
+Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  SUMMARY" -ForegroundColor Cyan
-Write-Host "  Total scanned     : $($jarFiles.Count)" -ForegroundColor White
-Write-Host "  Clean             : $cleanCount" -ForegroundColor Green
-Write-Host "  Suspicious        : $($suspiciousMods.Count)" -ForegroundColor Red
-Write-Host "  Heavily obfuscated: $($obfuscatedMods.Count)" -ForegroundColor Yellow
-Write-Host "  Minecraft         : Running (PID $($proc.Id))" -ForegroundColor Green
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "  Total JARs scanned     : $($jarFiles.Count)" -ForegroundColor White
+Write-Host "  Clean                  : $cleanCount" -ForegroundColor Green
+Write-Host "  Suspicious (strings)   : $($suspiciousMods.Count)" -ForegroundColor Red
+Write-Host "  Heavily obfuscated     : $($obfuscatedMods.Count)" -ForegroundColor Yellow
+Write-Host "  Minecraft running      : Yes (PID $($proc.Id))" -ForegroundColor Green
 Write-Host ""
-Write-Host "  Scan complete – Magician's Reveal v3.6" -ForegroundColor DarkCyan
+Write-Host "  Scan complete – Magician's Reveal v3.5" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "  Press any key to exit..." -ForegroundColor DarkGray
+Write-Host "Press any key to exit..." -ForegroundColor DarkGray
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
