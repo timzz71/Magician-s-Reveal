@@ -510,7 +510,7 @@ $jvmIssues = Check-Jvm
 #  OUTPUT (kept in Magician's Reveal's original plain style)
 # ============================================================
 Write-Host ""
-Write-Host "  ANALYSIS COMPLETE" -ForegroundColor Cyan
+Write-Host "  Analysis Complete." -ForegroundColor Cyan
 Write-Host ""
 
 if ($flagged.Count -eq 0 -and $obfuscated.Count -eq 0 -and $bypassed.Count -eq 0 -and $jvmIssues.Count -eq 0) {
@@ -518,7 +518,7 @@ if ($flagged.Count -eq 0 -and $obfuscated.Count -eq 0 -and $bypassed.Count -eq 0
 }
 else {
     if ($flagged.Count -gt 0) {
-        Write-Host "  FLAGGED FILES ($($flagged.Count))" -ForegroundColor Red
+        Write-Host "  Flagged Files. ($($flagged.Count))" -ForegroundColor Red
         Write-Host ""
         foreach ($f in $flagged) {
             Write-Host "  $($f.Name)" -ForegroundColor Yellow
@@ -539,7 +539,7 @@ else {
     }
 
     if ($bypassed.Count -gt 0) {
-        Write-Host "  BYPASS / INJECTION DETECTED ($($bypassed.Count))" -ForegroundColor Magenta
+        Write-Host "  Bypass/Injection Results. ($($bypassed.Count))" -ForegroundColor Magenta
         Write-Host ""
         foreach ($b in $bypassed) {
             Write-Host "  $($b.Name)" -ForegroundColor Yellow
