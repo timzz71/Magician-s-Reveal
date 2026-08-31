@@ -1,7 +1,7 @@
 # ============================================================
-#  MAGICIAN'S REVEAL  v3.4
+#  MAGICIAN'S REVEAL  v3.5
 #  Professional Minecraft Forensic Scanner
-#  Real signatures extracted from actual cheat clients
+#  Fixed false positives on Reach / Hitboxes
 # ============================================================
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -11,7 +11,7 @@ chcp 65001 | Out-Null
 Clear-Host
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  MAGICIAN'S REVEAL - v3.4" -ForegroundColor Cyan
+Write-Host "  MAGICIAN'S REVEAL - v3.5" -ForegroundColor Cyan
 Write-Host "  Professional Minecraft Forensic Scanner" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
@@ -64,10 +64,10 @@ if (-not (Test-Path $modsPath -PathType Container)) {
 Write-Host "[*] Mods folder: $modsPath" -ForegroundColor Green
 Write-Host ""
 
-# ---------- 3. Strong detection lists (extracted from real cheats) ----------
+# ---------- 3. Strong detection lists (no more weak generics) ----------
 
 $cheatStrings = @(
-    # Combat modules
+    # Strong combat modules only
     "AutoCrystal","AutoHitCrystal","AutoAnchor","DoubleAnchor","SafeAnchor","AirAnchor",
     "AutoTotem","InventoryTotem","HoverTotem","LegitTotem","AutoPot","AutoPotRefill","AutoArmor",
     "ShieldBreaker","ShieldDisabler","AutoDoubleHand","AutoMace","MaceSwap","StunSlam","AxeSpam",
@@ -77,9 +77,10 @@ $cheatStrings = @(
     "SelfDestruct","HideClient","SessionStealer","TokenLogger","TokenGrabber","DiscordToken",
     "RemoteAccess","ReverseShell","C2Server","Backdoor","KeyLogger","StashFinder","TrailFinder",
     "KillAura","ClickAura","CrystalAura","AnchorAura","BedAura","ReachHack","AntiKB","NoKnockback",
-    "PlayerESP","XRayHack","ScaffoldWalk","AutoClicker","BowAim","Criticals","Hitboxes","Reach",
+    "PlayerESP","XRayHack","ScaffoldWalk","AutoClicker","BowAim","Criticals",
+    "HitboxExpand","HitboxExpander","ReachHudElement","ReachDisplay",
 
-    # Real client packages / signatures (from your JARs + known)
+    # Real client packages / signatures
     "com/slither/cyemer","com/slither/velaris","dev/lvstrng/aidsfuscator",
     "dev.krypton","skid.krypton","dev.virel","orchard","org.chainlibs.module.impl.modules",
     "meteordevelopment","meteorclient","liquidbounce","fdp-client","net.ccbluex",
@@ -92,7 +93,7 @@ $cheatStrings = @(
     "LWFH Crystal","xyz.greaj","imgui.gl3","imgui.glfw","jnativehook","JNativeHook",
     "GlobalScreen","NativeKeyListener","phantom-refmap.json","client-refmap.json","cheat-refmap.json",
     "ClientPlayerInteractionManagerAccessor","ClientPlayerEntityMixim","dev.gambleclient",
-    "VelarisAuth","NativeObf","TriggerBotReadyEvent","ReachHudElement"
+    "VelarisAuth","NativeObf","TriggerBotReadyEvent"
 )
 
 # ---------- Helpers ----------
@@ -130,7 +131,7 @@ function Invoke-ModScan {
                 }
             }
 
-            # Special strong patterns from Clumps / stripped clients
+            # Strong patterns from real cheats
             if ($name -match 'dev/lvstrng/aidsfuscator') { [void]$found.Add("dev/lvstrng/aidsfuscator") }
             if ($name -match 'MixinExperienceOrb')       { [void]$found.Add("MixinExperienceOrb*") }
             if ($name -match '^a/Clumps')                 { [void]$found.Add("a/Clumps (obfuscated)") }
@@ -305,7 +306,7 @@ Write-Host "  Suspicious (strings)   : $($suspiciousMods.Count)" -ForegroundColo
 Write-Host "  Heavily obfuscated     : $($obfuscatedMods.Count)" -ForegroundColor Yellow
 Write-Host "  Minecraft running      : Yes (PID $($proc.Id))" -ForegroundColor Green
 Write-Host ""
-Write-Host "  Scan complete – Magician's Reveal v3.4" -ForegroundColor Cyan
+Write-Host "  Scan complete – Magician's Reveal v3.5" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Press any key to exit..." -ForegroundColor DarkGray
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
