@@ -1,7 +1,6 @@
 # Magician's Reveal - Professional Minecraft Forensic Scanner
 # Version: 1.0.0
 # Author: Timzz71
-# Description: Forensic scanner for consented screenshare investigations
 
 param(
     [string]$OutputDir = $PWD.Path,
@@ -9,19 +8,17 @@ param(
 )
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  🔍 MAGICIAN'S REVEAL - v1.0.0" -ForegroundColor Cyan
+Write-Host "  MAGICIAN'S REVEAL - v1.0.0" -ForegroundColor Cyan
 Write-Host "  Professional Minecraft Forensic Scanner" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Check Administrator
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
 if (-not $isAdmin) {
     Write-Warning "This script requires Administrator privileges for full forensic data collection."
     Write-Host "Continuing with limited permissions..." -ForegroundColor Yellow
 }
 
-# Initialize findings
 $script:Findings = @()
 
 function Add-Finding {
@@ -46,7 +43,6 @@ function Add-Finding {
     Write-Host "[$Tier] $Title" -ForegroundColor $(if ($Tier -eq "Detection") { "Red" } elseif ($Tier -eq "Warning") { "Yellow" } else { "White" })
 }
 
-# ============ SUSPICIOUS PATTERNS (CLEAN VERSION) ============
 $suspiciousPatterns = @(
     "AimAssist", "AnchorTweaks", "AutoAnchor", "AutoCrystal", "AutoDoubleHand",
     "AutoHitCrystal", "AutoPot", "AutoTotem", "AutoArmor", "InventoryTotem",
@@ -161,8 +157,6 @@ $cheatStrings = @(
     "xenon client", "GrimClient", "grim client", "phantom-refmap.json",
     "dqrkis.xyz", "Dqrkis Client"
 )
-
-# ============ SCAN FUNCTIONS ============
 
 function Scan-Environment {
     Write-Host "[*] Scanning environment..." -ForegroundColor Green
@@ -344,7 +338,6 @@ function Scan-EventLog {
     }
 }
 
-# ============ MAIN ============
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "[*] Starting forensic scan..." -ForegroundColor Green
 Write-Host "[*] Target: $MinecraftDir" -ForegroundColor Green
@@ -364,7 +357,6 @@ if ($continue) {
     Scan-EventLog
 }
 
-# ============ GENERATE REPORT ============
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "[*] Generating report..." -ForegroundColor Green
@@ -401,7 +393,7 @@ if ($infos) {
     }
 }
 if ($script:Findings.Count -eq 0) {
-    $report += "`n✅ No suspicious findings detected.`n"
+    $report += "`nNo suspicious findings detected.`n"
 }
 
 $report += "`n============================================"
