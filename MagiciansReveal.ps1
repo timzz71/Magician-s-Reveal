@@ -1,5 +1,5 @@
 # ============================================================
-#  MAGICIAN'S REVEAL  v5.1
+#  MAGICIAN'S REVEAL  V1.0.0
 #  Professional Minecraft Forensic Scanner
 # ============================================================
 
@@ -9,7 +9,7 @@ chcp 65001 | Out-Null
 Clear-Host
 
 Write-Host ""
-Write-Host "  MAGICIAN'S REVEAL  v5.1" -ForegroundColor Cyan
+Write-Host "  MAGICIAN'S REVEAL  V1.0.0" -ForegroundColor Cyan
 Write-Host "  Advanced Minecraft Client Analysis" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -551,7 +551,7 @@ else {
     }
 
     if ($obfuscated.Count -gt 0) {
-        Write-Host "  STRUCTURAL ANOMALIES ($($obfuscated.Count))" -ForegroundColor DarkYellow
+        Write-Host "  OBFUSCATIONS FOUND ($($obfuscated.Count))" -ForegroundColor DarkYellow
         Write-Host ""
         foreach ($o in $obfuscated) {
             Write-Host "  $($o.Name)" -ForegroundColor Yellow
@@ -577,10 +577,10 @@ Write-Host "  Files analyzed : $($jars.Count)"
 Write-Host "  Clean          : $clean" -ForegroundColor Green
 Write-Host "  Flagged        : $($flagged.Count)" -ForegroundColor Red
 Write-Host "  Bypass/Inject  : $($bypassed.Count)" -ForegroundColor Magenta
-Write-Host "  Anomalies      : $($obfuscated.Count)" -ForegroundColor Yellow
+Write-Host "  Obfuscations Found      : $($obfuscated.Count)" -ForegroundColor Yellow
 Write-Host "  Runtime notes  : $($jvmIssues.Count)" -ForegroundColor Magenta
 Write-Host ""
-Write-Host "  Magician's Reveal v5.1" -ForegroundColor DarkGray
+Write-Host "  Magician's Reveal V1.0.0" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  Press any key to exit..." -ForegroundColor DarkGray
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
