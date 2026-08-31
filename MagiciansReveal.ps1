@@ -8,8 +8,55 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 chcp 65001 | Out-Null
 Clear-Host
 
+# ============================================================
+#  BOX / BANNER HELPER
+#  Renders a full-width, colour-filled block so titles and
+#  section headers stand out instead of getting lost in the
+#  scrolling console text. Console fonts don't support real
+#  bold, so a solid background block is used instead — it's
+#  the clearest way to make text "pop" in a terminal.
+# ============================================================
+function Write-Box {
+    param(
+        [string]$Text,
+        [ConsoleColor]$FgColor = "White",
+        [ConsoleColor]$BgColor = "DarkCyan",
+        [int]$Width = 70,
+        [switch]$Center
+    )
+
+    $blank = "".PadRight($Width, ' ')
+
+    if ($Center) {
+        $inner = $Width - 2
+        $padLeft = [math]::Max(0, [math]::Floor(($inner - $Text.Length) / 2))
+        $padRight = [math]::Max(0, $inner - $Text.Length - $padLeft)
+        $textLine = " " + ("".PadRight($padLeft)) + $Text + ("".PadRight($padRight)) + " "
+    } else {
+        $textLine = "  $Text".PadRight($Width)
+    }
+    if ($textLine.Length -gt $Width) { $textLine = $textLine.Substring(0, $Width) }
+
+    Write-Host $blank -BackgroundColor $BgColor -ForegroundColor $FgColor
+    Write-Host $textLine -BackgroundColor $BgColor -ForegroundColor $FgColor
+    Write-Host $blank -BackgroundColor $BgColor -ForegroundColor $FgColor
+}
+
+function Write-SubBox {
+    # Slimmer single-line variant for lighter sub-headers (e.g. per-file names)
+    param(
+        [string]$Text,
+        [ConsoleColor]$FgColor = "Black",
+        [ConsoleColor]$BgColor = "Gray",
+        [int]$Width = 70
+    )
+    $textLine = "  $Text".PadRight($Width)
+    if ($textLine.Length -gt $Width) { $textLine = $textLine.Substring(0, $Width) }
+    Write-Host $textLine -BackgroundColor $BgColor -ForegroundColor $FgColor
+}
+
 Write-Host ""
-Write-Host "  MAGICIAN'S REVEAL  V1.0.0" -ForegroundColor Cyan
+Write-Box -Text "MAGICIAN'S REVEAL  V1.0.0" -FgColor Black -BgColor Cyan -Center
 Write-Host "  Advanced Minecraft Client Analysis" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -21,8 +68,7 @@ if (-not $mc) { $mc = Get-Process java -ErrorAction SilentlyContinue }
 
 if (-not $mc) {
     Write-Host ""
-    Write-Host "  Minecraft is not running." -ForegroundColor Red
-    Write-Host "  This session is considered INVALID." -ForegroundColor Red
+    Write-Box -Text "MINECRAFT IS NOT RUNNING — SESSION INVALID" -FgColor White -BgColor DarkRed -Center
     Write-Host ""
     Write-Host "  Press any key to exit..." -ForegroundColor DarkGray
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
@@ -507,10 +553,10 @@ Write-Host "`r$(' ' * 70)`r" -NoNewline
 $jvmIssues = Check-Jvm
 
 # ============================================================
-#  OUTPUT (kept in Magician's Reveal's original plain style)
+#  OUTPUT (boxed / colour-filled headers for clarity)
 # ============================================================
 Write-Host ""
-Write-Host "  ANALYSIS COMPLETE" -ForegroundColor Cyan
+Write-Box -Text "ANALYSIS COMPLETE" -FgColor Black -BgColor Cyan -Center
 Write-Host ""
 
 if ($flagged.Count -eq 0 -and $obfuscated.Count -eq 0 -and $bypassed.Count -eq 0 -and $jvmIssues.Count -eq 0) {
@@ -518,10 +564,10 @@ if ($flagged.Count -eq 0 -and $obfuscated.Count -eq 0 -and $bypassed.Count -eq 0
 }
 else {
     if ($flagged.Count -gt 0) {
-        Write-Host "  FLAGGED FILES ($($flagged.Count))" -ForegroundColor Red
+        Write-Box -Text "FLAGGED FILES ($($flagged.Count))" -FgColor White -BgColor DarkRed
         Write-Host ""
         foreach ($f in $flagged) {
-            Write-Host "  $($f.Name)" -ForegroundColor Yellow
+            Write-SubBox -Text $f.Name -FgColor Black -BgColor Yellow
             if ($f.Signatures.Count -gt 0) {
                 Write-Host "  Detected signatures:" -ForegroundColor Red
                 foreach ($h in ($f.Signatures | Sort-Object)) {
@@ -539,10 +585,10 @@ else {
     }
 
     if ($bypassed.Count -gt 0) {
-        Write-Host "  BYPASS / INJECTION DETECTED ($($bypassed.Count))" -ForegroundColor Magenta
+        Write-Box -Text "BYPASS / INJECTION DETECTED ($($bypassed.Count))" -FgColor White -BgColor Magenta
         Write-Host ""
         foreach ($b in $bypassed) {
-            Write-Host "  $($b.Name)" -ForegroundColor Yellow
+            Write-SubBox -Text $b.Name -FgColor Black -BgColor Yellow
             foreach ($flag in $b.Flags) {
                 Write-Host "    > $flag" -ForegroundColor Magenta
             }
@@ -551,10 +597,10 @@ else {
     }
 
     if ($obfuscated.Count -gt 0) {
-        Write-Host "  OBFUSCATIONS FOUND ($($obfuscated.Count))" -ForegroundColor DarkYellow
+        Write-Box -Text "OBFUSCATIONS FOUND ($($obfuscated.Count))" -FgColor Black -BgColor Yellow
         Write-Host ""
         foreach ($o in $obfuscated) {
-            Write-Host "  $($o.Name)" -ForegroundColor Yellow
+            Write-SubBox -Text $o.Name -FgColor Black -BgColor Yellow
             foreach ($flag in $o.Flags) {
                 Write-Host "    > $flag" -ForegroundColor DarkYellow
             }
@@ -563,7 +609,7 @@ else {
     }
 
     if ($jvmIssues.Count -gt 0) {
-        Write-Host "  RUNTIME OBSERVATIONS" -ForegroundColor Magenta
+        Write-Box -Text "RUNTIME OBSERVATIONS" -FgColor White -BgColor Magenta
         Write-Host ""
         foreach ($j in $jvmIssues) {
             Write-Host "    • $j" -ForegroundColor Magenta
@@ -572,7 +618,7 @@ else {
     }
 }
 
-Write-Host "  Summary"
+Write-Box -Text "SUMMARY" -FgColor Black -BgColor Gray
 Write-Host "  Files analyzed : $($jars.Count)"
 Write-Host "  Clean          : $clean" -ForegroundColor Green
 Write-Host "  Flagged        : $($flagged.Count)" -ForegroundColor Red
