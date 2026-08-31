@@ -1,5 +1,5 @@
 # ============================================================
-#  MAGICIAN'S REVEAL  v5.0
+#  MAGICIAN'S REVEAL  v5.1
 #  Professional Minecraft Forensic Scanner
 # ============================================================
 
@@ -9,7 +9,7 @@ chcp 65001 | Out-Null
 Clear-Host
 
 Write-Host ""
-Write-Host "  MAGICIAN'S REVEAL  v5.0" -ForegroundColor Cyan
+Write-Host "  MAGICIAN'S REVEAL  v5.1" -ForegroundColor Cyan
 Write-Host "  Advanced Minecraft Client Analysis" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -72,18 +72,24 @@ $moduleNames = @(
 
 $clientSignatures = @(
     "com/slither/cyemer","com/slither/velaris","dev/lvstrng/aidsfuscator",
-    "dev.krypton","skid.krypton","dev.virel","orchard","org.chainlibs",
+    "dev.krypton","skid.krypton","dev.virel","org.chainlibs",
     "meteordevelopment","meteorclient","liquidbounce","fdp-client","net.ccbluex",
     "doomsdayclient","novaclient","vape.gg","vapeclient","intent.store",
-    "rise.today","aristois","impactclient","konas","rusherhack","catlean",
-    "Asteria","PrestigeClient","gypsy","XenonClient","dqrkis.xyz",
+    "rise.today","aristois","impactclient","rusherhack","catlean",
+    "AsteriaClient","PrestigeClient","GypsyClient","XenonClient","dqrkis.xyz",
     "WalksyOptimizer","imgui.gl3","imgui.glfw","jnativehook","phantom-refmap.json",
     "ClientPlayerInteractionManagerAccessor","LicenseCheckMixin","obfuscatedAuth",
-    "sixtwo/","fivefive/","mixin/accessors","com/alan/clients","club/maxstats",
+    "sixtwo/","fivefive/","com/alan/clients","club/maxstats",
     "wtf/moonlight","me/zeroeightsix/kami","today/opai","xyz/greaj",
     "com/cheatbreaker","com/moonsworth","novoware","novoclient","pandaware",
-    "moonClient","astolfo","futureClient","inertia","exhibition","argon",
-    "grim client","org/chainlibs/module/impl/modules"
+    "moonClient","astolfo","futureClient","exhibition",
+    "org/chainlibs/module/impl/modules"
+    # NOTE: generic single-word or generic-pattern signatures (e.g. bare
+    # "mixin/accessors", "orchard", "gypsy", "argon", "inertia", "konas")
+    # were deliberately excluded here — they're either normal Mixin/Fabric
+    # plumbing or common English words that show up in legitimate mod
+    # packages, and matching on them alone produces false positives like
+    # flagging ferritecore/moreculling/BadOptimizations for using accessors.
 )
 
 # Literal in-jar strings that show up in configs / decompiled fragments of
@@ -305,13 +311,63 @@ function Analyze-Structure {
     return $flags
 }
 
+$knownLegitModIds = @(
+    "vmp-fabric","vmp","lithium","sodium","iris","fabric-api",
+    "modmenu","ferrite-core","ferritecore","lazydfu","starlight",
+    "entityculling","moreculling","memoryleakfix","krypton","c2me-fabric",
+    "smoothboot-fabric","immediatelyfast","noisium","threadtweak",
+    "badoptimizations","dynamic-fps","cloth-config","yet_another_config_lib_v3"
+)
+
+function Test-SuspiciousNestedJarName {
+    # Nested jars with no version and no maven-style group prefix are a
+    # common way cheat loaders smuggle a hidden payload inside an
+    # innocent-looking wrapper jar.
+    param([string]$JarName)
+    $mavenPrefixes = @("com_","org_","net_","io_","dev_","gs_","xyz_","app_","me_","tv_")
+    $base = [System.IO.Path]::GetFileNameWithoutExtension($JarName)
+    if ($base -match '\d') { return $false }
+    foreach ($pfx in $mavenPrefixes) { if ($base.ToLower().StartsWith($pfx)) { return $false } }
+    if ($base.Length -gt 20) { return $false }
+    return $true
+}
+
 function Analyze-Bypass {
-    # Runtime.exec / HTTP download / HTTP exfiltration detection on obfuscated code.
+    # Runtime.exec / HTTP download / HTTP exfiltration / nested-jar smuggling /
+    # fake-mod-identity (a jar impersonating a well-known clean mod) detection.
     param([string]$file)
 
     $flags = [System.Collections.Generic.List[string]]::new()
     try {
-        $zip     = [System.IO.Compression.ZipFile]::OpenRead($file)
+        $zip = [System.IO.Compression.ZipFile]::OpenRead($file)
+
+        # --- nested-jar smuggling check ---
+        $nestedJars   = @($zip.Entries | Where-Object { $_.FullName -match "^META-INF/jars/.+\.jar$" })
+        $outerClasses = @($zip.Entries | Where-Object { $_.FullName -match "\.class$" })
+
+        foreach ($nj in $nestedJars) {
+            $njName = [System.IO.Path]::GetFileName($nj.FullName)
+            if (Test-SuspiciousNestedJarName -JarName $njName) {
+                $flags.Add("Suspicious nested JAR with no version/dependency naming: $njName")
+            }
+        }
+        if ($nestedJars.Count -eq 1 -and $outerClasses.Count -lt 3) {
+            $njName = [System.IO.Path]::GetFileName(($nestedJars | Select-Object -First 1).FullName)
+            $flags.Add("Hollow shell jar — only $($outerClasses.Count) own class(es), just wraps: $njName")
+        }
+
+        # --- fake-mod-identity check ---
+        $declaredModId = ""
+        $fmj = $zip.Entries | Where-Object { $_.FullName -eq "fabric.mod.json" } | Select-Object -First 1
+        if ($fmj) {
+            try {
+                $sr = New-Object System.IO.StreamReader($fmj.Open())
+                $txt = $sr.ReadToEnd()
+                $sr.Close()
+                if ($txt -match '"id"\s*:\s*"([^"]+)"') { $declaredModId = $matches[1] }
+            } catch {}
+        }
+
         $entries = Get-AllZipEntries -ZipArchive $zip
 
         $totalClass    = 0
@@ -357,6 +413,11 @@ function Analyze-Bypass {
         }
         if ($httpDownload) { $flags.Add("Fetches and writes files from a remote server at runtime") }
         if ($httpExfil)    { $flags.Add("Sends data to an external server via HTTP POST") }
+
+        $dangerSoFar = $flags.Count -gt 0
+        if ($declaredModId -and ($knownLegitModIds -contains $declaredModId.ToLower()) -and $dangerSoFar) {
+            $flags.Add("Impersonation — claims mod id '$declaredModId' (a known clean mod) but contains the flags above")
+        }
     } catch {}
     return $flags
 }
@@ -373,11 +434,12 @@ function Check-Jvm {
             $agents = [regex]::Matches($wmi.CommandLine, '-javaagent:([^\s"]+)')
             $legitAgents = @("jmxremote","yjp","jrebel","newrelic","jacoco","theseus")
             foreach ($a in $agents) {
-                $agentName = [IO.Path]::GetFileName($a.Groups[1].Value)
+                $agentPath = $a.Groups[1].Value.Trim('"').Trim("'")
+                $agentName = [IO.Path]::GetFileName($agentPath)
                 $isLegit = $false
                 foreach ($la in $legitAgents) { if ($agentName -match $la) { $isLegit = $true; break } }
                 if (-not $isLegit) {
-                    $results.Add("Java agent loaded: $agentName")
+                    $results.Add("Java agent loaded: $agentName (path: $agentPath)")
                 }
             }
             if ($wmi.CommandLine -match '-Xbootclasspath') {
@@ -518,7 +580,7 @@ Write-Host "  Bypass/Inject  : $($bypassed.Count)" -ForegroundColor Magenta
 Write-Host "  Anomalies      : $($obfuscated.Count)" -ForegroundColor Yellow
 Write-Host "  Runtime notes  : $($jvmIssues.Count)" -ForegroundColor Magenta
 Write-Host ""
-Write-Host "  Magician's Reveal v5.0" -ForegroundColor DarkGray
+Write-Host "  Magician's Reveal v5.1" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  Press any key to exit..." -ForegroundColor DarkGray
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
