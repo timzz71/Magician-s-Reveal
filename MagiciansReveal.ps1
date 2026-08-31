@@ -1,7 +1,7 @@
 # Magician's Reveal - Professional Minecraft Forensic Scanner
-# Version: 2.0.1
+# Version: 2.0.2
 # Author: Timzz71
-# Description: Enhanced scanner with 1000+ obfuscated patterns, fast regex matching, custom mods path.
+# Description: Enhanced scanner with 1000+ obfuscated patterns, fixed matching.
 
 param(
     [string]$OutputDir = $PWD.Path,
@@ -10,18 +10,16 @@ param(
 )
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  MAGICIAN'S REVEAL - v2.0.1" -ForegroundColor Cyan
+Write-Host "  MAGICIAN'S REVEAL - v2.0.2" -ForegroundColor Cyan
 Write-Host "  Professional Minecraft Forensic Scanner" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Check Admin
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
 if (-not $isAdmin) {
     Write-Warning "Administrator privileges recommended for full forensic data collection."
 }
 
-# If ModsPath not provided, try to find .minecraft folder
 if (-not $ModsPath) {
     $minecraftDirs = @(
         "$env:APPDATA\.minecraft\mods",
@@ -44,7 +42,6 @@ Write-Host "[*] Mods folder: $ModsPath" -ForegroundColor Green
 Write-Host "[*] Output directory: $OutputDir" -ForegroundColor Green
 Write-Host ""
 
-# Initialize findings
 $script:Findings = @()
 $script:FindCount = 0
 
@@ -76,7 +73,6 @@ function Add-Finding {
 
 # ============ PATTERNS ============
 
-# Clear suspicious patterns (short list)
 $suspiciousPatterns = @(
     "AimAssist", "AnchorTweaks", "AutoAnchor", "AutoCrystal", "AutoDoubleHand",
     "AutoHitCrystal", "AutoPot", "AutoTotem", "AutoArmor", "InventoryTotem",
@@ -110,7 +106,6 @@ $suspiciousPatterns = @(
     "dev.gambleclient", "obfuscatedAuth", "phantom-refmap.json", "xyz.greaj"
 )
 
-# Cheat strings (common ones, also used for process/registry)
 $cheatStrings = @(
     "AutoCrystal", "autocrystal", "auto crystal", "cw crystal",
     "dontPlaceCrystal", "dontBreakCrystal", "AutoHitCrystal",
@@ -193,7 +188,7 @@ $cheatStrings = @(
     "dqrkis.xyz", "Dqrkis Client"
 )
 
-# Obfuscated patterns – stored as multi-line string (single quotes to avoid expansion)
+# Obfuscated patterns - stored as a single-quoted here-string to avoid parsing issues.
 $obfuscatedPatternsString = @'
 xP[Z
 o*-t
@@ -1889,7 +1884,7 @@ fe;4G
 S_II
 S_IM
 S_IQ
-]@""
+]""
 DQ`\d
 B5?G
 %{]{]
@@ -2847,10 +2842,11 @@ ko77
 "81!.81!.", ",]HA", "0Pi)", "=6Kk", "o5)QP",
 "sixtwo/app", "=6KK", "0Pii", ",]H1", "... (9 MB left)"
 '@
-# Convert the multi-line string into an array
+
+# Convert the multi-line string into an array, filtering out empty lines and the "..." line.
 $obfuscatedPatterns = $obfuscatedPatternsString -split "`r`n" | Where-Object { $_ -ne "" -and $_ -notmatch '^\.\.\.' }
 
-# Combine all patterns for content matching
+# Combine for content matching (we'll match each pattern individually, not as a giant regex)
 $allContentPatterns = $cheatStrings + $obfuscatedPatterns
 
 # ============ SCAN FUNCTIONS ============
@@ -2882,41 +2878,60 @@ function Scan-FileSystem {
     }
     Write-Host "   Found $total JAR files to scan." -ForegroundColor Green
     $scanned = 0
-    # Build regex pattern for content matching (escape special chars)
-    $chunkSize = 100
-    for ($i = 0; $i -lt $allContentPatterns.Count; $i += $chunkSize) {
-        $chunk = $allContentPatterns[$i..($i+$chunkSize-1)] | Where-Object { $_ -ne $null -and $_ -ne "" }
-        if ($chunk.Count -eq 0) { continue }
-        $regex = ($chunk | ForEach-Object { [regex]::Escape($_) }) -join "|"
-        # Scan files
-        foreach ($jar in $jarFiles) {
-            $scanned++
-            Write-Progress -Activity "Scanning mods" -Status "$($jar.Name)" -PercentComplete (($scanned / $total) * 100)
-            # Check filename first
-            $name = $jar.BaseName.ToLower()
-            foreach ($pattern in $obfuscatedPatterns + $suspiciousPatterns) {
-                if ($name -like "*$pattern*") {
-                    Add-Finding -Id "POTENTIAL_JAR_CLIENT_FOUND" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Potential JAR Client Found (Obfuscated)" -Message "Pattern '$pattern' in filename: $($jar.Name)" -Evidence @{pattern=$pattern; file=$jar.Name}
+    # For each jar, check filename and content
+    foreach ($jar in $jarFiles) {
+        $scanned++
+        Write-Progress -Activity "Scanning mods" -Status "$($jar.Name)" -PercentComplete (($scanned / $total) * 100)
+        $name = $jar.BaseName.ToLower()
+        
+        # --- Filename: match suspicious and obfuscated patterns as literal substrings ---
+        $matched = $false
+        foreach ($pattern in $suspiciousPatterns) {
+            if ($name.Contains($pattern.ToLower())) {
+                Add-Finding -Id "POTENTIAL_JAR_CLIENT_FOUND" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Potential JAR Client Found" -Message "Suspicious pattern '$pattern' in filename: $($jar.Name)" -Evidence @{pattern=$pattern; file=$jar.Name}
+                $matched = $true
+                break
+            }
+        }
+        if (-not $matched) {
+            foreach ($pattern in $obfuscatedPatterns) {
+                # patterns may be mixed case, use case-insensitive
+                if ($name.Contains($pattern.ToLower())) {
+                    Add-Finding -Id "POTENTIAL_JAR_CLIENT_FOUND" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Potential JAR Client Found (Obfuscated)" -Message "Obfuscated pattern in filename: $($jar.Name)" -Evidence @{pattern=$pattern; file=$jar.Name}
                     break
                 }
             }
-            # Check content with regex
-            try {
-                $content = [System.IO.File]::ReadAllText($jar.FullName) -replace "`0",""
-                if ($content -match $regex) {
-                    $matched = $Matches[0]
-                    Add-Finding -Id "CUSTOM_STRING_FOUND_WARNING" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Custom String Found (Obfuscated)" -Message "Matched obfuscated pattern '$matched' in $($jar.Name)" -Evidence @{string=$matched; file=$jar.Name}
-                }
-                # Also check for base64 long strings
-                if ($content -match '[A-Za-z0-9+/=]{60,}') {
-                    Add-Finding -Id "CUSTOM_STRING_FOUND_WARNING" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Custom String Found (Warning)" -Message "Base64 long string detected in $($jar.Name)" -Evidence @{string="Base64"; file=$jar.Name}
-                }
-            } catch {}
         }
+        
+        # --- Content scanning: match each pattern as a literal substring (case-insensitive) ---
+        try {
+            $content = [System.IO.File]::ReadAllText($jar.FullName) -replace "`0",""
+            $contentLower = $content.ToLower()
+            foreach ($pattern in $allContentPatterns) {
+                if ($contentLower.Contains($pattern.ToLower())) {
+                    Add-Finding -Id "CUSTOM_STRING_FOUND_WARNING" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Custom String Found (Warning)" -Message "Pattern '$pattern' found in $($jar.Name)" -Evidence @{string=$pattern; file=$jar.Name}
+                    break  # stop after first match to improve speed
+                }
+            }
+            # Additional checks: base64, hex, reflection, native
+            if ($content -match '[A-Za-z0-9+/=]{60,}') {
+                Add-Finding -Id "CUSTOM_STRING_FOUND_WARNING" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Custom String Found (Warning)" -Message "Base64 long string detected in $($jar.Name)" -Evidence @{string="Base64"; file=$jar.Name}
+            }
+            if ($content -match '\\x[0-9A-Fa-f]{2}\\x[0-9A-Fa-f]{2}') {
+                Add-Finding -Id "CUSTOM_STRING_FOUND_WARNING" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Custom String Found (Warning)" -Message "Hex encoded sequence detected in $($jar.Name)" -Evidence @{string="Hex"; file=$jar.Name}
+            }
+            if ($content -match 'Class\.forName\(.*?[Cc]he') {
+                Add-Finding -Id "CUSTOM_STRING_FOUND_WARNING" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Custom String Found (Warning)" -Message "Reflection to cheat class detected in $($jar.Name)" -Evidence @{string="Reflection"; file=$jar.Name}
+            }
+            if ($content -match 'System\.loadLibrary|System\.load') {
+                Add-Finding -Id "CUSTOM_STRING_FOUND_WARNING" -Tier "Warning" -Category "In-Process Memory Discoveries" -Title "Custom String Found (Warning)" -Message "Native library loading detected in $($jar.Name)" -Evidence @{string="Native"; file=$jar.Name}
+            }
+        } catch {}
     }
 }
 
 function Scan-Registry {
+    # ... (rest of functions unchanged, but with category fixed)
     Write-Host "[*] Scanning registry..." -ForegroundColor Green
     $regKeys = @("Vape", "Meteor", "LiquidBounce", "Wurst", "Sigma", "Novoware", "Prestige", "Doomsday", "Argon", "Krypton", "Delta", "Elysian", "Onyx", "Lumina", "Momentum", "RavenB++", "SkidBounce", "Skidcraft", "Backdoored", "LeuxBackdoor", "SalHackSkid", "GrassWare", "AllahWare", "BBCWare", "Arsenic", "Atrium", "BleachHack", "Caizm", "Coffee", "Cranberry", "Evangelion", "FDP", "Fog", "ForgeHax", "Huzuni", "Hydrogen", "Ikea", "Jex", "Kamiblue", "Konas", "Kura", "Lambda", "LavaHack", "Mercury", "Mint", "Mirai", "NClient", "Neptunium", "Ozark", "Raion", "Rebirth", "Rift", "Selene", "Seppuku", "Silence", "Spark", "Swift", "Tensor", "Tokyo", "Trollhack", "Vertex", "Vrpos", "Xulu", "Zeon", "ZeroTwo", "Zodiac")
     foreach ($key in $regKeys) {
@@ -2965,7 +2980,7 @@ function Scan-Processes {
     foreach ($p in $procs) {
         $name = $p.ProcessName.ToLower()
         foreach ($str in $cheatStrings) {
-            if ($name -like "*$str*") {
+            if ($name.Contains($str.ToLower())) {
                 Add-Finding -Id "CHEAT_FOUND_IN_WINDOWS_SERVICE" -Tier "Detection" -Category "Cheat Discovery in Memory" -Title "Cheat Found In Windows Service Memory" -Message "Cheat process '$str' found running" -Evidence @{service=$str; process=$p.ProcessName}
                 break
             }
@@ -3102,7 +3117,7 @@ if ($script:Findings.Count -eq 0) {
 }
 
 $report += "`n============================================"
-$report += "`nReport generated by Magician's Reveal v2.0.1"
+$report += "`nReport generated by Magician's Reveal v2.0.2"
 $report += "`n============================================"
 
 $txtFile = Join-Path $OutputDir "MagiciansReveal_report.txt"
