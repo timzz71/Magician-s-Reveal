@@ -1,7 +1,7 @@
 # ============================================================
-#  MAGICIAN'S REVEAL  v3.2
+#  MAGICIAN'S REVEAL  v3.3
 #  Professional Minecraft Forensic Scanner
-#  Enhanced • Strong detection • Clean output
+#  Strong detection + Real cheat obfuscation patterns
 # ============================================================
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -10,20 +10,17 @@ $OutputEncoding           = [System.Text.Encoding]::UTF8
 chcp 65001 | Out-Null
 Clear-Host
 
-# ---------- Banner ----------
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  MAGICIAN'S REVEAL - v3.2" -ForegroundColor Cyan
+Write-Host "  MAGICIAN'S REVEAL - v3.3" -ForegroundColor Cyan
 Write-Host "  Professional Minecraft Forensic Scanner" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# ---------- 1. Minecraft Process Check (required) ----------
+# ---------- 1. Minecraft must be running ----------
 Write-Host "[*] Checking Minecraft process..." -ForegroundColor Cyan
 
 $mcProcess = Get-Process javaw -ErrorAction SilentlyContinue
-if (-not $mcProcess) {
-    $mcProcess = Get-Process java -ErrorAction SilentlyContinue
-}
+if (-not $mcProcess) { $mcProcess = Get-Process java -ErrorAction SilentlyContinue }
 
 if (-not $mcProcess) {
     Write-Host ""
@@ -47,7 +44,7 @@ Write-Host "      Started : $startTime" -ForegroundColor Gray
 Write-Host "      Uptime  : $($uptime.Hours)h $($uptime.Minutes)m $($uptime.Seconds)s" -ForegroundColor Gray
 Write-Host ""
 
-# ---------- 2. Mods folder ----------
+# ---------- 2. Mods path ----------
 Write-Host "Enter path to the mods folder: " -NoNewline
 Write-Host "(press Enter for default)" -ForegroundColor DarkGray
 $modsPath = Read-Host "PATH"
@@ -67,65 +64,47 @@ if (-not (Test-Path $modsPath -PathType Container)) {
 Write-Host "[*] Mods folder: $modsPath" -ForegroundColor Green
 Write-Host ""
 
-# ---------- 3. High-signal cheat indicators only ----------
+# ---------- 3. High-signal detection lists ----------
+
+# Strong cheat feature strings
 $cheatStrings = @(
-    # Combat / macros
-    "AutoCrystal","autocrystal","AutoHitCrystal","AutoAnchor","DoubleAnchor",
-    "SafeAnchor","AirAnchor","AutoTotem","InventoryTotem","HoverTotem",
-    "LegitTotem","AutoPot","AutoPotRefill","AutoArmor","ShieldBreaker",
-    "ShieldDisabler","AutoDoubleHand","AutoMace","MaceSwap","StunSlam",
-    "AxeSpam","TriggerBot","AimAssist","SilentAim","SilentRotations",
-    "FakeLag","PingSpoof","FakeInv","WTap","AutoWeb","WebMacro",
-    "KeyPearl","LootYeeter","AutoFirework","ElytraSwap","FastPlace",
-    "FastXP","FastExp","NoJumpDelay","PackSpoof","Antiknockback",
-    "AuthBypass","obfuscatedAuth","LicenseCheckMixin","BaseFinder",
-    "SelfDestruct","HideClient","SessionStealer","TokenLogger",
-    "TokenGrabber","DiscordToken","RemoteAccess","ReverseShell",
-    "C2Server","Backdoor","KeyLogger","StashFinder","TrailFinder",
-    "KillAura","ClickAura","CrystalAura","AnchorAura","BedAura",
-    "ReachHack","AntiKB","NoKnockback","PlayerESP","XRayHack",
-    "ScaffoldWalk","AutoClicker","BowAim","Criticals",
-
-    # Known client packages / identifiers
-    "dev.krypton","skid.krypton","dev.virel","orchard",
-    "org.chainlibs.module.impl.modules",
-    "meteordevelopment","meteorclient","liquidbounce","fdp-client",
-    "net.ccbluex","doomsdayclient","novaclient","api.novaclient.lol",
-    "vape.gg","vapeclient","VapeLite","intent.store","IntentClient",
-    "rise.today","riseclient.com","aristois","impactclient","azura",
-    "pandaware","skilled","moonClient","astolfo","futureClient",
-    "konas","rusherhack","inertia","exhibition","catlean",
-    "CatleanClient","ArgonClient","Asteria","AsteriaClient",
-    "PrestigeClient","prestigeclient.vip","gypsy","GypsyClient",
-    "XenonClient","GrimClient","dqrkis.xyz","Dqrkis Client",
-    "WalksyOptimizer","WalksyCrystalOptimizerMod","WalskyOptimizer",
-    "LWFH Crystal","phantom-refmap.json","xyz.greaj",
-    "imgui.gl3","imgui.glfw","jnativehook","JNativeHook",
-    "GlobalScreen","NativeKeyListener"
+    "AutoCrystal","autocrystal","AutoHitCrystal","AutoAnchor","DoubleAnchor","SafeAnchor","AirAnchor",
+    "AutoTotem","InventoryTotem","HoverTotem","LegitTotem","AutoPot","AutoPotRefill","AutoArmor",
+    "ShieldBreaker","ShieldDisabler","AutoDoubleHand","AutoMace","MaceSwap","StunSlam","AxeSpam",
+    "TriggerBot","AimAssist","SilentAim","SilentRotations","FakeLag","PingSpoof","FakeInv","WTap",
+    "AutoWeb","WebMacro","KeyPearl","LootYeeter","AutoFirework","ElytraSwap","FastPlace",
+    "PackSpoof","Antiknockback","AuthBypass","obfuscatedAuth","LicenseCheckMixin","BaseFinder",
+    "SelfDestruct","HideClient","SessionStealer","TokenLogger","TokenGrabber","DiscordToken",
+    "RemoteAccess","ReverseShell","C2Server","Backdoor","KeyLogger","StashFinder","TrailFinder",
+    "KillAura","ClickAura","CrystalAura","AnchorAura","BedAura","ReachHack","AntiKB","NoKnockback",
+    "PlayerESP","XRayHack","ScaffoldWalk","AutoClicker","BowAim","Criticals","Hitboxes","Reach"
 )
 
-$suspiciousPatterns = @(
-    "AimAssist","AnchorTweaks","AutoAnchor","AutoCrystal","AutoDoubleHand",
-    "AutoHitCrystal","AutoPot","AutoTotem","InventoryTotem","LegitTotem",
-    "PingSpoof","SelfDestruct","ShieldBreaker","TriggerBot","AxeSpam",
-    "WebMacro","FastPlace","WalksyOptimizer","WalskyOptimizer",
-    "WalksyCrystalOptimizerMod","ShieldDisabler","SilentAim","FakeLag",
-    "dev.virel","orchard","BlockESP","dev.krypton","skid.krypton",
-    "AntiMissClick","LagReach","PopSwitch","SprintReset","ChestSteal",
-    "AntiBot","ElytraSwap","FastXP","FastExp","Refill","AirAnchor",
-    "jnativehook","FakeInv","HoverTotem","AutoClicker","AutoFirework",
-    "PackSpoof","Antiknockback","catlean","AuthBypass","Asteria",
-    "Prestige","MaceSwap","Macro198","StunSlam","SafeAnchor",
-    "DoubleAnchor","AutoTPA","BaseFinder","Xenon","gypsy",
-    "AutoPotRefill","KeyPearl","AutoNethPot","AutoDtap","AutoWeb",
-    "AnchorAction","imgui.gl3","imgui.glfw","BowAim","Criticals",
-    "Fakenick","FakeItem","invsee","ItemExploit","Hellion",
-    "LicenseCheckMixin","ClientPlayerInteractionManagerAccessor",
-    "ClientPlayerEntityMixim","dev.gambleclient","obfuscatedAuth",
-    "phantom-refmap.json","xyz.greaj"
+# Real cheat client / obfuscation signatures (these are the ones that matter)
+$cheatObfuscatedPatterns = @(
+    # Known client packages
+    "dev.krypton","skid.krypton","dev.virel","orchard","org.chainlibs.module.impl.modules",
+    "meteordevelopment","meteorclient","liquidbounce","fdp-client","net.ccbluex",
+    "doomsdayclient","novaclient","api.novaclient.lol","vape.gg","vapeclient","VapeLite",
+    "intent.store","IntentClient","rise.today","riseclient.com","aristois","impactclient",
+    "azura","pandaware","skilled","moonClient","astolfo","futureClient","konas","rusherhack",
+    "inertia","exhibition","catlean","CatleanClient","ArgonClient","Asteria","AsteriaClient",
+    "PrestigeClient","prestigeclient.vip","gypsy","GypsyClient","XenonClient","GrimClient",
+    "dqrkis.xyz","Dqrkis Client","WalksyOptimizer","WalksyCrystalOptimizerMod","WalskyOptimizer",
+    "LWFH Crystal","xyz.greaj","imgui.gl3","imgui.glfw","jnativehook","JNativeHook",
+    "GlobalScreen","NativeKeyListener","phantom-refmap.json","client-refmap.json","cheat-refmap.json",
+
+    # Common obfuscation / injection markers used by real clients
+    "LicenseCheckMixin","ClientPlayerInteractionManagerAccessor","ClientPlayerEntityMixim",
+    "dev.gambleclient","obfuscatedAuth","sixtwo/","fivefive/","org.chainlibs",
+    "mixin/accessors","startUseItemPost","startAttackPre","redirect`$","invokeDoAttack",
+    "invokeDoItemUse","setBlockBreakingCooldown","getBlockBreakingCooldown"
 )
 
-# ---------- Helper functions ----------
+# Combine for scanning
+$allStrongPatterns = $cheatStrings + $cheatObfuscatedPatterns
+
+# ---------- Helpers ----------
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 function Invoke-ModScan {
@@ -136,10 +115,10 @@ function Invoke-ModScan {
     try {
         $archive = [System.IO.Compression.ZipFile]::OpenRead($FilePath)
 
-        # Collect all entries (including nested JARs)
         $allEntries = [System.Collections.Generic.List[object]]::new()
         foreach ($e in $archive.Entries) { $allEntries.Add($e) }
 
+        # Nested JARs
         foreach ($nj in ($archive.Entries | Where-Object { $_.FullName -match "^META-INF/jars/.+\.jar$" })) {
             try {
                 $ms = New-Object System.IO.MemoryStream
@@ -151,16 +130,16 @@ function Invoke-ModScan {
             } catch {}
         }
 
-        # Check entry names
+        # Entry name check
         foreach ($entry in $allEntries) {
-            foreach ($p in $suspiciousPatterns) {
+            foreach ($p in $allStrongPatterns) {
                 if ($entry.FullName -match [regex]::Escape($p)) {
                     [void]$found.Add($p)
                 }
             }
         }
 
-        # Deep scan content
+        # Content check
         foreach ($entry in $allEntries) {
             if ($entry.FullName -match '\.(class|json)$' -or $entry.FullName -match 'MANIFEST\.MF') {
                 try {
@@ -172,7 +151,7 @@ function Invoke-ModScan {
                     $text = [System.Text.Encoding]::UTF8.GetString($bytes) +
                             [System.Text.Encoding]::ASCII.GetString($bytes)
 
-                    foreach ($s in $cheatStrings) {
+                    foreach ($s in $allStrongPatterns) {
                         if ($text.Contains($s)) {
                             [void]$found.Add($s)
                         }
@@ -190,26 +169,19 @@ function Get-ObfuscationFlags {
     param([string]$FilePath)
 
     $flags = [System.Collections.Generic.List[string]]::new()
-
     try {
         $archive = [System.IO.Compression.ZipFile]::OpenRead($FilePath)
-        $totalClass    = 0
-        $numeric       = 0
-        $unicode       = 0
-        $singleLetter  = 0
-        $japanese      = 0
-        $fullwidth     = 0
+        $totalClass = 0; $numeric = 0; $unicode = 0; $singleLetter = 0; $japanese = 0; $fullwidth = 0
 
         foreach ($entry in $archive.Entries) {
             if ($entry.FullName -match '\.class$') {
                 $totalClass++
                 $className = [System.IO.Path]::GetFileNameWithoutExtension(($entry.FullName -split '/')[-1])
-
-                if ($className -match '^\d+$')                          { $numeric++ }
-                if ($className -match '[^\x00-\x7F]')                   { $unicode++ }
-                if ($className -match '^[a-zA-Z]$')                     { $singleLetter++ }
-                if ($className -match '[\u3040-\u309F\u30A0-\u30FF]')  { $japanese++ }
-                if ($className -match '[\uFF21-\uFF3A\uFF41-\uFF5A]')  { $fullwidth++ }
+                if ($className -match '^\d+$')                         { $numeric++ }
+                if ($className -match '[^\x00-\x7F]')                  { $unicode++ }
+                if ($className -match '^[a-zA-Z]$')                    { $singleLetter++ }
+                if ($className -match '[\u3040-\u309F\u30A0-\u30FF]') { $japanese++ }
+                if ($className -match '[\uFF21-\uFF3A\uFF41-\uFF5A]') { $fullwidth++ }
             }
         }
         $archive.Dispose()
@@ -218,30 +190,17 @@ function Get-ObfuscationFlags {
 
         $pct = { param($n) [math]::Round(($n / $totalClass) * 100) }
 
-        # Stricter thresholds = only real heavy cheat obfuscation
-        if ((& $pct $numeric) -ge 30) {
-            $flags.Add("Heavy numeric class names ($((& $pct $numeric))%)")
-        }
-        if ((& $pct $unicode) -ge 20) {
-            $flags.Add("Unicode / non-ASCII class names ($((& $pct $unicode))%)")
-        }
-        if ((& $pct $singleLetter) -ge 25) {
-            $flags.Add("Single-letter class names ($((& $pct $singleLetter))%)")
-        }
-        if ($japanese -gt 0) {
-            $flags.Add("Japanese obfuscation detected ($japanese classes)")
-        }
-        if ($fullwidth -gt 0) {
-            $flags.Add("Fullwidth Unicode class names ($fullwidth classes)")
-        }
+        if ((& $pct $numeric) -ge 30)      { $flags.Add("Heavy numeric class names ($((& $pct $numeric))%)") }
+        if ((& $pct $unicode) -ge 20)      { $flags.Add("Unicode / non-ASCII class names ($((& $pct $unicode))%)") }
+        if ((& $pct $singleLetter) -ge 25) { $flags.Add("Single-letter class names ($((& $pct $singleLetter))%)") }
+        if ($japanese -gt 0)               { $flags.Add("Japanese obfuscation detected ($japanese classes)") }
+        if ($fullwidth -gt 0)              { $flags.Add("Fullwidth Unicode class names ($fullwidth classes)") }
     } catch {}
-
     return $flags
 }
 
 # ---------- Main scan ----------
 $jarFiles = Get-ChildItem -Path $modsPath -Filter *.jar -ErrorAction SilentlyContinue
-
 if ($jarFiles.Count -eq 0) {
     Write-Host "[!] No JAR files found." -ForegroundColor Yellow
     Write-Host "Press any key to exit..."
@@ -254,7 +213,7 @@ Write-Host ""
 
 $suspiciousMods = @()
 $obfuscatedMods = @()
-$cleanCount     = 0
+$cleanCount = 0
 
 $idx = 0
 foreach ($jar in $jarFiles) {
@@ -324,7 +283,6 @@ else {
         Write-Host "  [!]  HEAVILY OBFUSCATED (no known cheat strings)" -ForegroundColor DarkYellow
         Write-Host "  --------------------------------------" -ForegroundColor DarkYellow
         Write-Host ""
-
         foreach ($mod in $obfuscatedMods) {
             Write-Host "  +-- $($mod.FileName)" -ForegroundColor Yellow
             foreach ($f in $mod.Flags) {
@@ -336,7 +294,6 @@ else {
     }
 }
 
-# Summary
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  SUMMARY" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
@@ -346,7 +303,7 @@ Write-Host "  Suspicious (strings)   : $($suspiciousMods.Count)" -ForegroundColo
 Write-Host "  Heavily obfuscated     : $($obfuscatedMods.Count)" -ForegroundColor Yellow
 Write-Host "  Minecraft running      : Yes (PID $($proc.Id))" -ForegroundColor Green
 Write-Host ""
-Write-Host "  Scan complete – Magician's Reveal v3.2" -ForegroundColor Cyan
+Write-Host "  Scan complete – Magician's Reveal v3.3" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Press any key to exit..." -ForegroundColor DarkGray
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
