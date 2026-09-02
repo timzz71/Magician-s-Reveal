@@ -9,7 +9,7 @@ chcp 65001 | Out-Null
 Clear-Host
 
 Write-Host ""
-Write-Host "  MAGICIAN'S REVEAL  v5.1" -ForegroundColor Cyan
+Write-Host "  MAGICIAN'S REVEAL  v1.0.0" -ForegroundColor Cyan
 Write-Host "  Advanced Minecraft Client Analysis" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -580,7 +580,7 @@ Write-Host "  Bypass/Inject  : $($bypassed.Count)" -ForegroundColor Magenta
 Write-Host "  Anomalies      : $($obfuscated.Count)" -ForegroundColor Yellow
 Write-Host "  Runtime notes  : $($jvmIssues.Count)" -ForegroundColor Magenta
 Write-Host ""
-Write-Host "  Magician's Reveal v5.1" -ForegroundColor DarkGray
+Write-Host "  Magician's Reveal v1.0.0" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  Press any key to exit..." -ForegroundColor DarkGray
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
